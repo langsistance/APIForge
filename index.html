@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>API Interceptor App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 网页浏览器 -->
+    <div class="panel browser-panel">
+      <div class="panel-header">
+        <h3>网页浏览器</h3>
+        <div class="browser-controls">
+          <input type="text" id="urlInput" placeholder="输入网址..." value="file:///Users/heyuehui/Desktop/AITest/debug.html">
+          <button id="loadBtn">加载</button>
+          <button id="startInterceptBtn">开始拦截</button>
+          <button id="stopInterceptBtn" disabled>停止拦截</button>
+        </div>
+      </div>
+      <div class="panel-content">
+        <webview id="webview" src="about:blank" style="width:100%; height:100%;" 
+                 allowpopups 
+                 disablewebsecurity
+                 partition="persist:webview"
+                 nodeintegration
+                 preload="/Users/heyuehui/Desktop/AITest/webview-preload.js"></webview>
+      </div>
+    </div>
+
+    <!-- API拦截工具栏 -->
+    <div class="panel tools-panel">
+      <div class="panel-header">
+        <h3>工具栏</h3>
+      </div>
+      <div class="panel-content">
+        <div class="intercepted-apis">
+          <h4>拦截到的API:</h4>
+          <div id="apiList" class="api-list"></div>
+          <button id="clearApisBtn">清空列表</button>
+        </div>
+        
+        <div class="generated-tools">
+          <h4>生成的工具:</h4>
+          <div id="generatedTools" class="generated-tools-list"></div>
+        </div>
+        
+        <div class="actions">
+          <button id="exportToolsBtn">导出工具</button>
+          <button id="importToolsBtn">导入工具</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "api-interceptor-app",
+  "version": "1.0.0",
+  "description": "Electron app with API interception and AI tools",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@langchain/anthropic": "^0.3.26",
+    "@langchain/core": "^0.3.0",
+    "@langchain/google-genai": "^0.2.16",
+    "@langchain/langgraph": "^0.2.0",
+    "axios": "^1.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "langchain": "^0.2.0",
+    "node-fetch": "^2.7.0",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0",
+    "zod": "^3.25.76"
+  }
+}
