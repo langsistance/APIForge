@@ -1,8 +1,10 @@
 {
-  "name": "api-interceptor-app",
+  "name": "apiforge",
   "version": "1.0.0",
-  "description": "Electron app with API interception and AI tools",
-  "main": "main.js",
+  "description": "APIForge - 智能API捕获与工具生成平台",
+  "productName": "APIForge",
+  "author": "APIForge Team",
+  "main": "main/index.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev"
