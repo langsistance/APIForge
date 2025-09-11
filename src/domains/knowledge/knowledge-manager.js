@@ -44,11 +44,9 @@ export class KnowledgeManager {
           `Loaded ${result.knowledge.length} knowledge items from server`
         );
 
-        // 直接使用知识数据，不再获取额外的工具信息
-        const enrichedKnowledge = result.knowledge;
-
-        await this.updateKnowledgeList(enrichedKnowledge);
-        this.updateKnowledgeStats(enrichedKnowledge);
+        // 直接使用知识数据，不在列表加载时获取工具详情
+        await this.updateKnowledgeList(result.knowledge);
+        this.updateKnowledgeStats(result.knowledge);
       } else {
         await this.updateKnowledgeList([]);
         this.updateKnowledgeStats([]);
@@ -274,12 +272,12 @@ export class KnowledgeManager {
       // 显示问题作为主要内容
       const questionText = knowledge.question || "无问题";
 
-      // 显示工具信息，优先显示tool_name，其次显示tool_id
+      // 显示工具信息，只显示tool_name
       let toolInfo = "无关联工具";
       if (knowledge.tool_name) {
         toolInfo = `🔧 ${knowledge.tool_name}`;
       } else if (knowledge.tool_id) {
-        toolInfo = `🔧 工具ID: ${knowledge.tool_id}`;
+        toolInfo = `🔧 关联工具`;
       }
 
       knowledgeElement.innerHTML = `
@@ -287,16 +285,54 @@ export class KnowledgeManager {
           <div class="knowledge-description">${toolInfo}</div>
         `;
 
-      knowledgeElement.addEventListener("click", () =>
-        this.showKnowledgeDetails(knowledge)
+      knowledgeElement.addEventListener(
+        "click",
+        async () => await this.showKnowledgeDetails(knowledge)
       );
       this.knowledgeList.appendChild(knowledgeElement);
     });
   }
 
-  showKnowledgeDetails(knowledge) {
+  async showKnowledgeDetails(knowledge) {
     const modal = this.uiManager.createModal();
     const modalContent = modal.querySelector(".modal-content");
+
+    // 先显示加载状态
+    modalContent.innerHTML = `
+      <div class="modal-header">
+        <h3>知识库详情</h3>
+        <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; padding: 20px;">
+          <div>正在加载工具详情...</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // 获取工具详情
+    let toolInfo = null;
+    if (knowledge.tool_id) {
+      try {
+        console.log(`获取工具详情: tool_id=${knowledge.tool_id}`);
+        const toolResult = await this.apiClient.queryToolById(
+          knowledge.tool_id
+        );
+
+        if (toolResult.success && toolResult.data) {
+          toolInfo = toolResult.data;
+          console.log(`工具详情获取成功:`, toolResult.data);
+        } else {
+          console.warn(
+            `工具详情获取失败: tool_id=${knowledge.tool_id}`,
+            toolResult
+          );
+        }
+      } catch (error) {
+        console.error(`获取工具详情出错: tool_id=${knowledge.tool_id}`, error);
+      }
+    }
 
     // 生成问答对的HTML
     let qaContentHtml = "";
@@ -304,42 +340,78 @@ export class KnowledgeManager {
     if (knowledge.answer) {
       // 显示问题和答案
       qaContentHtml = `
-        <div class="qa-detail-item">
-          <div class="qa-detail-content">
-            <div class="qa-question">
-              <strong>问题:</strong> ${knowledge.question || "无问题"}
+        <div class="qa-detail-item" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+          <div class="qa-question" style="margin-bottom: 15px;">
+            <div style="font-weight: bold; color: #007bff; margin-bottom: 8px; font-size: 16px;">❓ 问题</div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #007bff;">
+              ${knowledge.question || "无问题"}
             </div>
-            <div class="qa-answer">
-              <strong>答案:</strong>
-              <div class="answer-content">${knowledge.answer}</div>
+          </div>
+          <div class="qa-answer">
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 8px; font-size: 16px;">✅ 答案</div>
+            <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #28a745; line-height: 1.6;">
+              ${knowledge.answer}
             </div>
           </div>
         </div>
       `;
     } else {
       qaContentHtml = `
-        <div class="qa-detail-item">
-          <div class="qa-detail-header">无内容</div>
+        <div class="qa-detail-item" style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; color: #6c757d;">
+          <div style="font-size: 18px;">📝</div>
+          <div style="margin-top: 8px;">暂无问答内容</div>
         </div>
       `;
     }
 
     // 生成工具信息HTML
     let toolInfoHtml = "";
-    if (knowledge.tool_name || knowledge.tool_id) {
+    if (toolInfo) {
+      // 显示详细的工具信息
       toolInfoHtml = `
-          <div class="detail-item">
-            <strong>关联工具:</strong> ${
-              knowledge.tool_name || `工具ID: ${knowledge.tool_id}`
-            }
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+          <div class="detail-item" style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">🏷️ 工具名称</div>
+            <div style="background: white; padding: 10px; border-radius: 4px;">${
+              toolInfo.title || "未知工具"
+            }</div>
           </div>
-        `;
+          <div class="detail-item" style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">📝 工具描述</div>
+            <div style="background: white; padding: 10px; border-radius: 4px; line-height: 1.5;">${
+              toolInfo.description || "无描述"
+            }</div>
+          </div>
+          <div class="detail-item" style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">🔗 工具URL</div>
+            <div style="background: white; padding: 10px; border-radius: 4px;">
+              <a href="${
+                toolInfo.url || "#"
+              }" target="_blank" style="color: #007bff; text-decoration: none; word-break: break-all;">
+                ${toolInfo.url || "无URL"}
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (knowledge.tool_name || knowledge.tool_id) {
+      toolInfoHtml = `
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+          <div class="detail-item">
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">🔧 关联工具</div>
+            <div style="background: white; padding: 10px; border-radius: 4px;">
+              ${knowledge.tool_name || "未知工具"}
+            </div>
+          </div>
+        </div>
+      `;
     } else {
       toolInfoHtml = `
-          <div class="detail-item">
-            <strong>关联工具:</strong> 无关联工具
-          </div>
-        `;
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; color: #6c757d;">
+          <div style="font-size: 18px;">🔧</div>
+          <div style="margin-top: 8px;">无关联工具</div>
+        </div>
+      `;
     }
 
     modalContent.innerHTML = `
@@ -348,27 +420,37 @@ export class KnowledgeManager {
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
-        ${toolInfoHtml}
-        <div class="detail-item">
-          <strong>创建时间:</strong> ${
-            knowledge.create_time
-              ? new Date(knowledge.create_time).toLocaleString()
-              : knowledge.created_at
-              ? new Date(knowledge.created_at).toLocaleString()
-              : "未知"
-          }
+        <div class="knowledge-content-section">
+          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px;">📚 知识内容</h4>
+          <div class="qa-details-container">
+            ${qaContentHtml}
+          </div>
         </div>
-        <div class="detail-item">
-          <strong>状态:</strong> ${knowledge.public !== false ? "公开" : "私有"}
+        
+        <div class="tool-info-section" style="margin-top: 25px;">
+          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #28a745; padding-bottom: 5px;">🔧 关联工具</h4>
+          ${toolInfoHtml}
         </div>
-        <div class="detail-item">
-          <strong>模型:</strong> ${knowledge.model_name || "未知"}
-        </div>
-        <div class="detail-item">
-          <strong>问答内容:</strong>
-        </div>
-        <div class="qa-details-container">
-          ${qaContentHtml}
+        
+        <div class="metadata-section" style="margin-top: 25px;">
+          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #6c757d; padding-bottom: 5px;">ℹ️ 基本信息</h4>
+          <div class="detail-item">
+            <strong>创建时间:</strong> ${
+              knowledge.create_time
+                ? new Date(knowledge.create_time).toLocaleString()
+                : knowledge.created_at
+                ? new Date(knowledge.created_at).toLocaleString()
+                : "未知"
+            }
+          </div>
+          <div class="detail-item">
+            <strong>状态:</strong> ${
+              knowledge.public !== false ? "公开" : "私有"
+            }
+          </div>
+          <div class="detail-item">
+            <strong>模型:</strong> ${knowledge.model_name || "未知"}
+          </div>
         </div>
       </div>
       <div class="modal-footer">

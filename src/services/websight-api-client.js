@@ -464,6 +464,13 @@ class WebSightAPIClient {
   }
 
   /**
+   * 根据工具ID查询工具详情
+   */
+  async queryToolById(toolId) {
+    return await this.request("GET", `/query_tool_by_id?tool_id=${toolId}`);
+  }
+
+  /**
    * 执行工具调用
    */
   async executeTool(toolData, params) {
