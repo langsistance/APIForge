@@ -140,6 +140,11 @@ export class KnowledgeManager {
     `;
 
     document.body.appendChild(modal);
+    
+    // 更新弹窗内的翻译文本
+    if (window.app && window.app.uiUpdater) {
+      window.app.uiUpdater.updateContainerTexts(modal);
+    }
   }
 
   // 多问答对相关方法已移除，现在只支持单个问答对
@@ -189,7 +194,7 @@ export class KnowledgeManager {
           remoteKnowledgeId = result.knowledge_id;
           console.log("知识库创建成功:", result);
         } else {
-          throw new Error(result.message || "知识库创建失败");
+          throw new Error(result.message || $t('alerts.knowledgeCreationFailed'));
         }
       } else {
         // 工具没有远程ID，需要同时创建工具和知识库
@@ -222,7 +227,7 @@ export class KnowledgeManager {
           selectedTool.remoteId = remoteToolId;
           this.saveData(); // 保存更新后的工具信息
         } else {
-          throw new Error(result.message || "工具和知识库创建失败");
+          throw new Error(result.message || $t('alerts.toolAndKnowledgeCreationFailed'));
         }
       }
 
@@ -238,12 +243,12 @@ export class KnowledgeManager {
       });
 
       this.uiManager.showNotification(
-        `成功为工具"${selectedTool.name}"创建知识条目`,
+        $t('alerts.knowledgeCreatedForTool', { name: selectedTool.name }),
         "success"
       );
     } catch (error) {
-      console.error("创建工具知识失败:", error);
-      this.uiManager.showNotification(`创建失败: ${error.message}`, "error");
+      console.error($t('alerts.createToolKnowledgeFailed'), error);
+      this.uiManager.showNotification($t('alerts.creationFailed', { error: error.message }), "error");
     }
   }
 
@@ -300,16 +305,21 @@ export class KnowledgeManager {
     // 先显示加载状态
     modalContent.innerHTML = `
       <div class="modal-header">
-        <h3>知识库详情</h3>
+        <h3 data-i18n="modals.knowledgeDetails.title">${$t('modals.knowledgeDetails.title')}</h3>
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
         <div style="text-align: center; padding: 20px;">
-          <div>正在加载工具详情...</div>
+          <div data-i18n="modals.knowledgeDetails.loadingToolDetails">${$t('modals.knowledgeDetails.loadingToolDetails')}</div>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
+    
+    // 更新弹窗内的翻译文本
+    if (window.app && window.app.uiUpdater) {
+      window.app.uiUpdater.updateContainerTexts(modal);
+    }
 
     // 获取工具详情
     let toolInfo = null;
@@ -342,13 +352,13 @@ export class KnowledgeManager {
       qaContentHtml = `
         <div class="qa-detail-item" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
           <div class="qa-question" style="margin-bottom: 15px;">
-            <div style="font-weight: bold; color: #007bff; margin-bottom: 8px; font-size: 16px;">❓ 问题</div>
+            <div style="font-weight: bold; color: #007bff; margin-bottom: 8px; font-size: 16px;" data-i18n="modals.knowledgeDetails.question">${$t('modals.knowledgeDetails.question')}</div>
             <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #007bff;">
-              ${knowledge.question || "无问题"}
+              ${knowledge.question || $t('modals.knowledgeDetails.noQuestion')}
             </div>
           </div>
           <div class="qa-answer">
-            <div style="font-weight: bold; color: #28a745; margin-bottom: 8px; font-size: 16px;">✅ 答案</div>
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 8px; font-size: 16px;" data-i18n="modals.knowledgeDetails.answer">${$t('modals.knowledgeDetails.answer')}</div>
             <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #28a745; line-height: 1.6;">
               ${knowledge.answer}
             </div>
@@ -359,7 +369,7 @@ export class KnowledgeManager {
       qaContentHtml = `
         <div class="qa-detail-item" style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; color: #6c757d;">
           <div style="font-size: 18px;">📝</div>
-          <div style="margin-top: 8px;">暂无问答内容</div>
+          <div style="margin-top: 8px;" data-i18n="modals.knowledgeDetails.noQAContent">${$t('modals.knowledgeDetails.noQAContent')}</div>
         </div>
       `;
     }
@@ -371,24 +381,24 @@ export class KnowledgeManager {
       toolInfoHtml = `
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
           <div class="detail-item" style="margin-bottom: 12px;">
-            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">🏷️ 工具名称</div>
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;" data-i18n="modals.knowledgeDetails.toolName">${$t('modals.knowledgeDetails.toolName')}</div>
             <div style="background: white; padding: 10px; border-radius: 4px;">${
-              toolInfo.title || "未知工具"
+              toolInfo.title || $t('modals.knowledgeDetails.unknownTool')
             }</div>
           </div>
           <div class="detail-item" style="margin-bottom: 12px;">
-            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">📝 工具描述</div>
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;" data-i18n="modals.knowledgeDetails.toolDescription">${$t('modals.knowledgeDetails.toolDescription')}</div>
             <div style="background: white; padding: 10px; border-radius: 4px; line-height: 1.5;">${
-              toolInfo.description || "无描述"
+              toolInfo.description || $t('modals.knowledgeDetails.noDescription')
             }</div>
           </div>
           <div class="detail-item" style="margin-bottom: 12px;">
-            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">🔗 工具URL</div>
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;" data-i18n="modals.knowledgeDetails.toolUrl">${$t('modals.knowledgeDetails.toolUrl')}</div>
             <div style="background: white; padding: 10px; border-radius: 4px;">
               <a href="${
                 toolInfo.url || "#"
               }" target="_blank" style="color: #007bff; text-decoration: none; word-break: break-all;">
-                ${toolInfo.url || "无URL"}
+                ${toolInfo.url || $t('modals.knowledgeDetails.noUrl')}
               </a>
             </div>
           </div>
@@ -398,9 +408,9 @@ export class KnowledgeManager {
       toolInfoHtml = `
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
           <div class="detail-item">
-            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">🔧 关联工具</div>
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;" data-i18n="modals.knowledgeDetails.associatedTool">${$t('modals.knowledgeDetails.associatedTool')}</div>
             <div style="background: white; padding: 10px; border-radius: 4px;">
-              ${knowledge.tool_name || "未知工具"}
+              ${knowledge.tool_name || $t('modals.knowledgeDetails.unknownTool')}
             </div>
           </div>
         </div>
@@ -409,47 +419,47 @@ export class KnowledgeManager {
       toolInfoHtml = `
         <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; color: #6c757d;">
           <div style="font-size: 18px;">🔧</div>
-          <div style="margin-top: 8px;">无关联工具</div>
+          <div style="margin-top: 8px;" data-i18n="modals.knowledgeDetails.noAssociatedTool">${$t('modals.knowledgeDetails.noAssociatedTool')}</div>
         </div>
       `;
     }
 
     modalContent.innerHTML = `
       <div class="modal-header">
-        <h3>知识库详情</h3>
+        <h3 data-i18n="modals.knowledgeDetails.title">${$t('modals.knowledgeDetails.title')}</h3>
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
         <div class="knowledge-content-section">
-          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px;">📚 知识内容</h4>
+          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px;" data-i18n="modals.knowledgeDetails.knowledgeContent">${$t('modals.knowledgeDetails.knowledgeContent')}</h4>
           <div class="qa-details-container">
             ${qaContentHtml}
           </div>
         </div>
         
         <div class="tool-info-section" style="margin-top: 25px;">
-          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #28a745; padding-bottom: 5px;">🔧 关联工具</h4>
+          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #28a745; padding-bottom: 5px;" data-i18n="modals.knowledgeDetails.toolInfo">${$t('modals.knowledgeDetails.toolInfo')}</h4>
           ${toolInfoHtml}
         </div>
         
         <div class="metadata-section" style="margin-top: 25px;">
-          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #6c757d; padding-bottom: 5px;">ℹ️ 基本信息</h4>
+          <h4 style="margin-bottom: 15px; color: #333; border-bottom: 2px solid #6c757d; padding-bottom: 5px;" data-i18n="modals.knowledgeDetails.basicInfo">${$t('modals.knowledgeDetails.basicInfo')}</h4>
           <div class="detail-item">
-            <strong>创建时间:</strong> ${
+            <strong data-i18n="modals.knowledgeDetails.createdAt">${$t('modals.knowledgeDetails.createdAt')}:</strong> ${
               knowledge.create_time
                 ? new Date(knowledge.create_time).toLocaleString()
                 : knowledge.created_at
                 ? new Date(knowledge.created_at).toLocaleString()
-                : "未知"
+                : $t('modals.knowledgeDetails.unknown')
             }
           </div>
           <div class="detail-item">
-            <strong>状态:</strong> ${
-              knowledge.public !== false ? "公开" : "私有"
+            <strong data-i18n="modals.knowledgeDetails.status">${$t('modals.knowledgeDetails.status')}:</strong> ${
+              knowledge.public !== false ? $t('modals.knowledgeDetails.public') : $t('modals.knowledgeDetails.private')
             }
           </div>
           <div class="detail-item">
-            <strong>模型:</strong> ${knowledge.model_name || "未知"}
+            <strong data-i18n="modals.knowledgeDetails.modelName">${$t('modals.knowledgeDetails.modelName')}:</strong> ${knowledge.model_name || $t('modals.knowledgeDetails.unknown')}
           </div>
         </div>
       </div>
@@ -457,15 +467,20 @@ export class KnowledgeManager {
         <button class="btn btn-danger" onclick="app.knowledgeManager.deleteKnowledge('${
           knowledge.id || knowledge.remoteId
         }'); this.closest('.modal').remove();">
-          删除知识库
+          ${$t('modals.knowledgeDetails.deleteKnowledge')}
         </button>
         <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
-          关闭
+          ${$t('modals.close')}
         </button>
       </div>
     `;
 
     document.body.appendChild(modal);
+    
+    // 更新弹窗内的翻译文本
+    if (window.app && window.app.uiUpdater) {
+      window.app.uiUpdater.updateContainerTexts(modal);
+    }
   }
 
   async deleteKnowledge(knowledgeId) {
@@ -481,7 +496,7 @@ export class KnowledgeManager {
       );
 
       if (!response.success) {
-        throw new Error(response.message || "删除失败");
+        throw new Error(response.message || $t('alerts.deleteFailed'));
       }
 
       console.log("知识库删除成功");
@@ -492,10 +507,10 @@ export class KnowledgeManager {
       // 触发事件
       eventBus.emit(Events.KNOWLEDGE_DELETED, { knowledgeId });
 
-      this.uiManager.showNotification("知识删除成功", "success");
+      this.uiManager.showNotification($t('alerts.knowledgeDeletedSuccess'), "success");
     } catch (error) {
       console.error("删除知识失败:", error);
-      this.uiManager.showNotification(`删除失败: ${error.message}`, "error");
+      this.uiManager.showNotification($t('alerts.deletionFailed', { error: error.message }), "error");
     }
   }
 

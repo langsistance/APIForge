@@ -260,6 +260,34 @@ export default {
       createTool: 'Create Tool'
     },
     
+    // Knowledge details modal
+    knowledgeDetails: {
+      title: 'Knowledge Details',
+      loadingToolDetails: 'Loading tool details...',
+      question: '❓ Question',
+      answer: '✅ Answer',
+      noQuestion: 'No question',
+      noQAContent: 'No Q&A content',
+      toolName: '🏷️ Tool Name',
+      toolDescription: '📝 Tool Description',
+      toolUrl: '🔗 Tool URL',
+      unknownTool: 'Unknown tool',
+      noDescription: 'No description',
+      noUrl: 'No URL',
+      associatedTool: '🔧 Associated Tool',
+      noAssociatedTool: 'No associated tool',
+      knowledgeContent: '📚 Knowledge Content',
+      toolInfo: '🔧 Associated Tool',
+      basicInfo: 'ℹ️ Basic Information',
+      createdAt: 'Created At',
+      status: 'Status',
+      modelName: 'Model',
+      unknown: 'Unknown',
+      public: 'Public',
+      private: 'Private',
+      deleteKnowledge: 'Delete Knowledge'
+    },
+    
     // Tool details modal
     toolDetails: {
       title: 'Tool Details',
@@ -284,6 +312,14 @@ export default {
   // Alerts and confirmation messages
   alerts: {
     noToolsForKnowledge: 'Please generate at least one tool from intercepted APIs before creating knowledge',
+    knowledgeCreationFailed: 'Knowledge creation failed',
+    toolAndKnowledgeCreationFailed: 'Tool and knowledge creation failed',
+    knowledgeCreatedForTool: 'Successfully created knowledge entry for tool "{name}"',
+    createToolKnowledgeFailed: 'Failed to create tool knowledge',
+    creationFailed: 'Creation failed: {error}',
+    deleteFailed: 'Deletion failed',
+    knowledgeDeletedSuccess: 'Knowledge deleted successfully',
+    deletionFailed: 'Deletion failed: {error}',
     noToolsCreated: 'No tools created yet',
     noKnowledgeAdded: 'No knowledge added yet',
     createToolFirstTip: 'Please create tools first, then add relevant knowledge',

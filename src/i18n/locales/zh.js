@@ -260,6 +260,34 @@ export default {
       createTool: '创建工具'
     },
     
+    // 知识库详情弹窗
+    knowledgeDetails: {
+      title: '知识库详情',
+      loadingToolDetails: '正在加载工具详情...',
+      question: '❓ 问题',
+      answer: '✅ 答案',
+      noQuestion: '无问题',
+      noQAContent: '暂无问答内容',
+      toolName: '🏷️ 工具名称',
+      toolDescription: '📝 工具描述',
+      toolUrl: '🔗 工具URL',
+      unknownTool: '未知工具',
+      noDescription: '无描述',
+      noUrl: '无URL',
+      associatedTool: '🔧 关联工具',
+      noAssociatedTool: '无关联工具',
+      knowledgeContent: '📚 知识内容',
+      toolInfo: '🔧 关联工具',
+      basicInfo: 'ℹ️ 基本信息',
+      createdAt: '创建时间',
+      status: '状态',
+      modelName: '模型',
+      unknown: '未知',
+      public: '公开',
+      private: '私有',
+      deleteKnowledge: '删除知识库'
+    },
+    
     // 工具详情弹窗
     toolDetails: {
       title: '工具详情',
@@ -284,6 +312,14 @@ export default {
   // 警告和确认消息
   alerts: {
     noToolsForKnowledge: '请先从拦截的API中生成至少一个工具，然后才能创建知识库',
+    knowledgeCreationFailed: '知识库创建失败',
+    toolAndKnowledgeCreationFailed: '工具和知识库创建失败',
+    knowledgeCreatedForTool: '成功为工具"{name}"创建知识条目',
+    createToolKnowledgeFailed: '创建工具知识失败',
+    creationFailed: '创建失败: {error}',
+    deleteFailed: '删除失败',
+    knowledgeDeletedSuccess: '知识删除成功',
+    deletionFailed: '删除失败: {error}',
     noToolsCreated: '还没有创建工具',
     noKnowledgeAdded: '还没有添加知识',
     createToolFirstTip: '请先创建工具，然后添加相关知识',
