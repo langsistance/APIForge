@@ -82,7 +82,7 @@ export class KnowledgeManager {
     // 检查是否有已生成的工具
     const tools = this.apiManager.getTools();
     if (tools.length === 0) {
-      alert("请先从拦截的API中生成至少一个工具，然后才能创建知识库");
+      alert($t('alerts.noToolsForKnowledge'));
       return;
     }
 
@@ -99,42 +99,42 @@ export class KnowledgeManager {
 
     modalContent.innerHTML = `
       <div class="modal-header">
-        <h3>为工具添加知识</h3>
+        <h3 data-i18n="modals.knowledgeCreate.title">${$t('modals.knowledgeCreate.title')}</h3>
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="selectedToolIndex">选择工具 <span class="required">*</span>:</label>
+          <label for="selectedToolIndex" data-i18n="modals.knowledgeCreate.selectTool">${$t('modals.knowledgeCreate.selectTool')} <span class="required" data-i18n="modals.knowledgeCreate.required">${$t('modals.knowledgeCreate.required')}</span>:</label>
           <select id="selectedToolIndex" class="form-control" required>
-            <option value="">请选择一个工具</option>
+            <option value="" data-i18n="modals.knowledgeCreate.selectToolPlaceholder">${$t('modals.knowledgeCreate.selectToolPlaceholder')}</option>
             ${toolOptions}
           </select>
         </div>
         
         <div class="form-section">
-          <h5>问题和答案</h5>
+          <h5 data-i18n="modals.knowledgeCreate.questionAndAnswer">${$t('modals.knowledgeCreate.questionAndAnswer')}</h5>
           <div class="form-group">
-            <label>问题 <span class="required">*</span>:</label>
-            <input type="text" id="knowledgeQuestion" class="form-control" placeholder="请输入问题，如：如何查询北京的天气？" required>
+            <label data-i18n="modals.knowledgeCreate.question">${$t('modals.knowledgeCreate.question')} <span class="required" data-i18n="modals.knowledgeCreate.required">${$t('modals.knowledgeCreate.required')}</span>:</label>
+            <input type="text" id="knowledgeQuestion" class="form-control" data-i18n-placeholder="modals.knowledgeCreate.questionPlaceholder" placeholder="${$t('modals.knowledgeCreate.questionPlaceholder')}" required>
           </div>
           <div class="form-group">
-            <label>答案 <span class="required">*</span>:</label>
-            <textarea id="knowledgeAnswer" class="form-control" rows="3" placeholder="请输入对应的答案或解决方案" required></textarea>
+            <label data-i18n="modals.knowledgeCreate.answer">${$t('modals.knowledgeCreate.answer')} <span class="required" data-i18n="modals.knowledgeCreate.required">${$t('modals.knowledgeCreate.required')}</span>:</label>
+            <textarea id="knowledgeAnswer" class="form-control" rows="3" data-i18n-placeholder="modals.knowledgeCreate.answerPlaceholder" placeholder="${$t('modals.knowledgeCreate.answerPlaceholder')}" required></textarea>
           </div>
         </div>
         
         <div class="form-group">
           <label>
-            <input type="checkbox" id="knowledgePublic" checked> 设为公开
+            <input type="checkbox" id="knowledgePublic" checked> <span data-i18n="modals.knowledgeCreate.makePublic">${$t('modals.knowledgeCreate.makePublic')}</span>
           </label>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="app.knowledgeManager.createToolKnowledge(); this.closest('.modal').remove();">
-          创建工具知识
+        <button class="btn btn-primary" onclick="app.knowledgeManager.createToolKnowledge(); this.closest('.modal').remove();" data-i18n="modals.knowledgeCreate.createToolKnowledge">
+          ${$t('modals.knowledgeCreate.createToolKnowledge')}
         </button>
-        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
-          取消
+        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();" data-i18n="modals.cancel">
+          ${$t('modals.cancel')}
         </button>
       </div>
     `;
@@ -152,12 +152,12 @@ export class KnowledgeManager {
     const answer = document.getElementById("knowledgeAnswer").value.trim();
 
     if (!selectedToolIndex) {
-      alert("请选择一个工具");
+      alert($t('alerts.pleaseSelectTool'));
       return;
     }
 
     if (!question || !answer) {
-      alert("请填写完整的问题和答案");
+      alert($t('alerts.fillQuestionAnswer'));
       return;
     }
 
@@ -256,9 +256,9 @@ export class KnowledgeManager {
       this.knowledgeList.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">📚</div>
-          <div>还没有添加知识</div>
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">
-            请先创建工具，然后添加相关知识
+          <div data-i18n="alerts.noKnowledgeAdded">${$t('alerts.noKnowledgeAdded')}</div>
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;" data-i18n="alerts.createToolFirstTip">
+            ${$t('alerts.createToolFirstTip')}
           </div>
         </div>
       `;
@@ -469,7 +469,7 @@ export class KnowledgeManager {
   }
 
   async deleteKnowledge(knowledgeId) {
-    if (!confirm("确定要删除这条知识吗？")) {
+    if (!confirm($t('alerts.confirmDeleteKnowledge'))) {
       return;
     }
 

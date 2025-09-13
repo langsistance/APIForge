@@ -72,7 +72,7 @@ export class BrowserManager {
   loadWebpage() {
     const url = this.urlInput.value.trim();
     if (!url) {
-      alert('请输入网址');
+      alert($t('alerts.enterWebAddress'));
       return;
     }
     

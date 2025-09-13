@@ -2,36 +2,53 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>APIForge - 智能API捕获与工具生成平台</title>
+  <title data-i18n="app.title">APIForge - 智能API捕获与工具生成平台</title>
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
   <div class="app-container">
-    <!-- 第一栏：知识库管理 -->
-    <div class="panel knowledge-panel">
+    <!-- 顶部工具栏 -->
+    <div class="top-toolbar">
+      <div class="toolbar-left">
+        <h2 class="app-title" data-i18n="app.title">WebSight - 智能网页数据拦截与分析工具</h2>
+      </div>
+      <div class="toolbar-right">
+        <div class="language-selector">
+          <button id="languageToggle" class="language-toggle-btn" title="Switch Language">
+            <span id="currentLanguageIcon">🇨🇳</span>
+            <span id="currentLanguageText">中文</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+      <!-- 第一栏：知识库管理 -->
+      <div class="panel knowledge-panel">
       <div class="panel-header">
-        <h3>知识库管理</h3>
+        <h3 data-i18n="knowledge.title">知识库管理</h3>
         <div class="knowledge-controls">
-          <button id="addKnowledgeBtn" class="add-btn">添加知识</button>
+          <button id="addKnowledgeBtn" class="add-btn" data-i18n="knowledge.create">添加知识</button>
         </div>
       </div>
       <div class="panel-content">
         <div class="knowledge-search">
-          <input type="text" id="knowledgeSearch" placeholder="搜索知识..." class="filter-input">
+          <input type="text" id="knowledgeSearch" data-i18n-placeholder="knowledge.search" placeholder="搜索知识..." class="filter-input">
         </div>
         
         <div class="knowledge-list">
-          <h4>已有知识:</h4>
+          <h4 data-i18n="knowledge.title">已有知识:</h4>
           <div id="knowledgeList" class="knowledge-items"></div>
         </div>
         
         <div class="knowledge-stats">
           <div class="stat-item">
-            <span class="stat-label">总数:</span>
+            <span class="stat-label" data-i18n="common.total">总数:</span>
             <span id="knowledgeCount" class="stat-value">0</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">可用:</span>
+            <span class="stat-label" data-i18n="common.available">可用:</span>
             <span id="availableKnowledgeCount" class="stat-value">0</span>
           </div>
         </div>
@@ -41,33 +58,20 @@
     <!-- 第二栏：聊天页面 -->
     <div class="panel chat-panel">
       <div class="panel-header">
-        <h3>AI助手</h3>
+        <h3 data-i18n="chat.title">AI助手</h3>
         <div class="chat-controls">
-          <button id="clearChatBtn" class="clear-btn">清空对话</button>
+          <button id="clearChatBtn" class="clear-btn" data-i18n="chat.clearHistory">清空对话</button>
         </div>
       </div>
       <div class="panel-content">
         <div class="chat-messages" id="chatMessages">
-          <div class="welcome-message">
-            <div class="system-message">
-              <div class="message-icon">🤖</div>
-              <div class="message-content">
-                <p>您好！我是AI助手，可以帮您：</p>
-                <ul>
-                  <li>使用录制的API工具回答问题</li>
-                  <li>查询知识库中的信息</li>
-                  <li>分析网页数据和API调用</li>
-                </ul>
-                <p>请开始您的提问吧！</p>
-              </div>
-            </div>
-          </div>
+          <!-- 欢迎消息将由JavaScript动态生成，支持多语言 -->
         </div>
         
         <div class="chat-input-area">
           <div class="input-container">
-            <textarea id="chatInput" placeholder="输入您的问题..." rows="2"></textarea>
-            <button id="sendChatBtn" class="send-btn">发送</button>
+            <textarea id="chatInput" data-i18n-placeholder="chat.placeholder" placeholder="输入您的问题..." rows="2"></textarea>
+            <button id="sendChatBtn" class="send-btn" data-i18n="chat.send">发送</button>
           </div>
         </div>
       </div>
@@ -76,11 +80,11 @@
     <!-- 第三栏：网页浏览器 -->
     <div class="panel browser-panel">
       <div class="panel-header">
-        <h3>网页浏览器</h3>
+        <h3 data-i18n="browser.title">网页浏览器</h3>
         <div class="browser-controls">
-          <input type="text" id="urlInput" placeholder="输入网址...">
-          <button id="loadBtn">加载</button>
-          <button id="startInterceptBtn" class="intercept-active">停止拦截</button>
+          <input type="text" id="urlInput" data-i18n-placeholder="browser.address" placeholder="输入网址...">
+          <button id="loadBtn" data-i18n="browser.go">加载</button>
+          <button id="startInterceptBtn" class="intercept-active" data-i18n="api.stopIntercept">停止拦截</button>
         </div>
       </div>
       <div class="panel-content">
@@ -96,28 +100,29 @@
     <!-- 第四栏：API拦截工具栏 -->
     <div class="panel tools-panel">
       <div class="panel-header">
-        <h3>API工具</h3>
+        <h3 data-i18n="tools.title">API工具</h3>
         <div class="tools-controls">
-          <button id="createToolBtn" class="create-btn">创建工具</button>
+          <button id="createToolBtn" class="create-btn" data-i18n="tools.create">创建工具</button>
         </div>
       </div>
       <div class="panel-content">
         <div class="intercepted-apis">
-          <h4>拦截到的API:</h4>
+          <h4 data-i18n="api.intercepted">拦截到的API:</h4>
           <div class="filter-container">
-            <input type="text" id="apiFilter" placeholder="过滤API (URL、方法、状态码)..." class="filter-input">
-            <button id="clearFilterBtn" class="clear-filter-btn">清空过滤</button>
+            <input type="text" id="apiFilter" data-i18n-placeholder="api.filterPlaceholder" placeholder="过滤API (URL、方法、状态码)..." class="filter-input">
+            <button id="clearFilterBtn" class="clear-filter-btn" data-i18n="common.clear">清空过滤</button>
           </div>
           <div id="apiList" class="api-list"></div>
-          <button id="clearApisBtn">清空列表</button>
+          <button id="clearApisBtn" data-i18n="api.clearAll">清空列表</button>
         </div>
         
         <div class="generated-tools">
-          <h4>生成的工具:</h4>
+          <h4 data-i18n="tools.title">生成的工具:</h4>
           <div id="generatedTools" class="generated-tools-list"></div>
         </div>
       </div>
     </div>
+    </div> <!-- 结束 main-content -->
   </div>
 
   <script type="module" src="main.js"></script>

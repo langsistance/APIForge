@@ -3,9 +3,11 @@
  */
 
 export class UIManager {
-  constructor() {
+  constructor(i18n = null, uiUpdater = null) {
     this.notifications = [];
     this.modals = [];
+    this.i18n = i18n;
+    this.uiUpdater = uiUpdater;
   }
 
   init() {

@@ -147,9 +147,9 @@ export class APIManager {
       this.apiList.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🔍</div>
-          <div>还没有拦截到API请求</div>
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">
-            请先开启拦截，然后在网页中进行操作
+          <div data-i18n="alerts.noApiIntercepted">${$t('alerts.noApiIntercepted')}</div>
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;" data-i18n="alerts.enableInterceptTip">
+            ${$t('alerts.enableInterceptTip')}
           </div>
         </div>
       `;
@@ -242,12 +242,12 @@ export class APIManager {
   }
 
   clearAPIs() {
-    if (confirm("确定要清空所有API记录吗？")) {
+    if (confirm($t('alerts.confirmClearApis'))) {
       this.interceptedAPIs = [];
       this.filteredAPIs = [];
       this.updateAPIList();
       // 不再保存拦截的API列表到本地存储
-      this.uiManager.showNotification("API记录已清空", "success");
+      this.uiManager.showNotification($t('alerts.apisCleared'), "success");
     }
   }
 
@@ -263,18 +263,18 @@ export class APIManager {
 
     modalContent.innerHTML = `
       <div class="modal-header">
-        <h3>API详情</h3>
+        <h3 data-i18n="modals.apiDetails.title">${$t('modals.apiDetails.title')}</h3>
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
         ${this.generateAPIDetailsHTML(api)}
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary create-tool-btn" data-api-id="${api.id}">
-          生成工具
+        <button class="btn btn-primary create-tool-btn" data-api-id="${api.id}" data-i18n="modals.apiDetails.generateTool">
+          ${$t('modals.apiDetails.generateTool')}
         </button>
-        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
-          关闭
+        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();" data-i18n="modals.close">
+          ${$t('modals.close')}
         </button>
       </div>
     `;
@@ -400,37 +400,42 @@ export class APIManager {
 
     modalContent.innerHTML = `
       <div class="modal-header">
-        <h3>创建工具</h3>
+        <h3 data-i18n="modals.toolCreate.title">${$t('modals.toolCreate.title')}</h3>
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="toolName">工具名称:</label>
+          <label for="toolName" data-i18n="modals.toolCreate.toolName">${$t('modals.toolCreate.toolName')}:</label>
           <input type="text" id="toolName" class="form-control" 
-                 placeholder="例如: get_weather 或 search api (字母开头，可包含字母数字下划线)" 
+                 data-i18n-placeholder="modals.toolCreate.toolNamePlaceholder" 
+                 placeholder="${$t('modals.toolCreate.toolNamePlaceholder')}" 
                  value="${
                    selectedAPI
                      ? this.generateToolNameFromURL(selectedAPI.url)
                      : ""
                  }"
                  onblur="app.apiManager.validateToolName(this)">
-          <small class="form-text text-muted">
-            工具名称用于 OpenAI function calling，必须以字母开头，只能包含字母、数字、下划线和连字符
+          <small class="form-text text-muted" data-i18n="modals.toolCreate.toolNameHelp">
+            ${$t('modals.toolCreate.toolNameHelp')}
           </small>
         </div>
         <div class="form-group">
-          <label for="toolDescription">工具描述:</label>
-          <textarea id="toolDescription" class="form-control" rows="3" placeholder="请描述这个工具的功能">${
+          <label for="toolDescription" data-i18n="modals.toolCreate.toolDescription">${$t('modals.toolCreate.toolDescription')}:</label>
+          <textarea id="toolDescription" class="form-control" rows="3" 
+                    data-i18n-placeholder="modals.toolCreate.toolDescriptionPlaceholder" 
+                    placeholder="${$t('modals.toolCreate.toolDescriptionPlaceholder')}">${
             selectedAPI ? this.generateToolDescription(selectedAPI) : ""
           }</textarea>
         </div>
         <div class="form-group">
-          <label for="toolURL">API地址:</label>
-          <input type="text" id="toolURL" class="form-control" placeholder="请输入API地址" 
+          <label for="toolURL" data-i18n="modals.toolCreate.apiUrl">${$t('modals.toolCreate.apiUrl')}:</label>
+          <input type="text" id="toolURL" class="form-control" 
+                 data-i18n-placeholder="modals.toolCreate.apiUrlPlaceholder" 
+                 placeholder="${$t('modals.toolCreate.apiUrlPlaceholder')}" 
                  value="${selectedAPI ? selectedAPI.url : ""}">
         </div>
         <div class="form-group">
-          <label for="toolMethod">请求方式:</label>
+          <label for="toolMethod" data-i18n="modals.toolCreate.requestMethod">${$t('modals.toolCreate.requestMethod')}:</label>
           <select id="toolMethod" class="form-control">
             <option value="GET" ${
               selectedAPI && selectedAPI.method === "GET" ? "selected" : ""
@@ -450,7 +455,7 @@ export class APIManager {
           </select>
         </div>
         <div class="form-group">
-          <label for="toolContentType">Content-Type:</label>
+          <label for="toolContentType" data-i18n="modals.toolCreate.contentType">${$t('modals.toolCreate.contentType')}:</label>
           <select id="toolContentType" class="form-control">
             <option value="application/json" ${
               !selectedAPI ||
@@ -479,46 +484,57 @@ export class APIManager {
           </select>
         </div>
         <div class="form-group">
-          <label for="toolBody">请求体 (Body):</label>
-          <textarea id="toolBody" class="form-control" rows="4" placeholder="请输入请求体内容（JSON或其他格式）">${
+          <label for="toolBody" data-i18n="modals.toolCreate.requestBody">${$t('modals.toolCreate.requestBody')}:</label>
+          <textarea id="toolBody" class="form-control" rows="4" 
+                    data-i18n-placeholder="modals.toolCreate.requestBodyPlaceholder" 
+                    placeholder="${$t('modals.toolCreate.requestBodyPlaceholder')}">${
             selectedAPI ? this.generateToolParamsBodyOnly(selectedAPI) : "{}"
           }</textarea>
-          <small class="form-text text-muted">
-            对于GET请求，通常不需要请求体。对于POST/PUT等请求，请根据Content-Type填写相应格式的内容。
+          <small class="form-text text-muted" data-i18n="modals.toolCreate.requestBodyHelp">
+            ${$t('modals.toolCreate.requestBodyHelp')}
           </small>
         </div>
         <div class="form-group">
           <label>
-            <input type="checkbox" id="toolPublic" checked> 设为公开
+            <input type="checkbox" id="toolPublic" checked> <span data-i18n="modals.toolCreate.makePublic">${$t('modals.toolCreate.makePublic')}</span>
           </label>
         </div>
         <div class="form-group">
           <label>
-            <input type="checkbox" id="createKnowledge" onchange="app.apiManager.toggleKnowledgeFields(this.checked)"> 同时创建知识库
+            <input type="checkbox" id="createKnowledge" onchange="app.apiManager.toggleKnowledgeFields(this.checked)"> <span data-i18n="modals.toolCreate.createKnowledge">${$t('modals.toolCreate.createKnowledge')}</span>
           </label>
         </div>
         <div id="knowledgeFields" style="display: none;">
           <div class="form-group">
-            <label for="knowledgeQuestion">知识库问题:</label>
-            <input type="text" id="knowledgeQuestion" class="form-control" placeholder="例如：如何使用这个工具？">
+            <label for="knowledgeQuestion" data-i18n="modals.toolCreate.knowledgeQuestion">${$t('modals.toolCreate.knowledgeQuestion')}:</label>
+            <input type="text" id="knowledgeQuestion" class="form-control" 
+                   data-i18n-placeholder="modals.toolCreate.knowledgeQuestionPlaceholder" 
+                   placeholder="${$t('modals.toolCreate.knowledgeQuestionPlaceholder')}">
           </div>
           <div class="form-group">
-            <label for="knowledgeAnswer">知识库答案:</label>
-            <textarea id="knowledgeAnswer" class="form-control" rows="3" placeholder="请输入对应的答案或使用说明"></textarea>
+            <label for="knowledgeAnswer" data-i18n="modals.toolCreate.knowledgeAnswer">${$t('modals.toolCreate.knowledgeAnswer')}:</label>
+            <textarea id="knowledgeAnswer" class="form-control" rows="3" 
+                      data-i18n-placeholder="modals.toolCreate.knowledgeAnswerPlaceholder" 
+                      placeholder="${$t('modals.toolCreate.knowledgeAnswerPlaceholder')}"></textarea>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="app.apiManager.createTool(); this.closest('.modal').remove();">
-          创建工具
+        <button class="btn btn-primary" onclick="app.apiManager.createTool(); this.closest('.modal').remove();" data-i18n="modals.toolCreate.createTool">
+          ${$t('modals.toolCreate.createTool')}
         </button>
-        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
-          取消
+        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();" data-i18n="modals.cancel">
+          ${$t('modals.cancel')}
         </button>
       </div>
     `;
 
     document.body.appendChild(modal);
+    
+    // 更新弹窗内的翻译文本
+    if (window.app && window.app.uiUpdater) {
+      window.app.uiUpdater.updateContainerTexts(modal);
+    }
   }
 
   toggleKnowledgeFields(checked) {
@@ -561,15 +577,13 @@ export class APIManager {
     const createKnowledge = document.getElementById("createKnowledge").checked;
 
     if (!name || !description || !url) {
-      alert("请填写所有必填字段");
+      alert($t('alerts.fillAllRequired'));
       return;
     }
 
     // 验证工具名称格式
     if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(name)) {
-      alert(
-        "工具名称格式不正确！必须以字母开头，只能包含字母、数字、下划线和连字符"
-      );
+      alert($t('alerts.invalidToolName'));
       return;
     }
 
@@ -598,7 +612,7 @@ export class APIManager {
         .value.trim();
 
       if (!knowledgeQuestion || !knowledgeAnswer) {
-        alert("如果选择创建知识库，请填写完整的问题和答案");
+        alert($t('alerts.fillKnowledgeComplete'));
         return;
       }
     }
@@ -719,9 +733,12 @@ export class APIManager {
       this.generatedToolsDiv.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🔧</div>
-          <div>还没有创建工具</div>
-          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">
-            本地工具: ${this.generatedTools.length} | 服务器工具: ${this.serverTools.length}
+          <div data-i18n="alerts.noToolsCreated">${$t('alerts.noToolsCreated')}</div>
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;" data-i18n="alerts.localServerToolStats">
+            ${$t('alerts.localServerToolStats', { 
+              local: this.generatedTools.length, 
+              server: this.serverTools.length 
+            })}
           </div>
         </div>
       `;
@@ -740,7 +757,7 @@ export class APIManager {
       padding-bottom: 4px;
     `;
     statsDiv.innerHTML = `
-      总计: ${mergedTools.length} | 本地: ${this.generatedTools.length} | 服务器: ${this.serverTools.length}
+      ${$t('alerts.toolsStatsTotal', { total: mergedTools.length, local: this.generatedTools.length, server: this.serverTools.length })}
       <button onclick="app.apiManager.refreshServerTools()" style="
         margin-left: 8px; 
         font-size: 10px; 
@@ -749,7 +766,7 @@ export class APIManager {
         background: #f8f9fa;
         border-radius: 3px;
         cursor: pointer;
-      ">刷新</button>
+      " data-i18n="alerts.refreshButton">${$t('alerts.refreshButton')}</button>
     `;
     this.generatedToolsDiv.appendChild(statsDiv);
 
@@ -786,7 +803,7 @@ export class APIManager {
             flex-shrink: 0;
             margin-top: 2px;
           ">
-            ${tool.source === "server" ? "服务器" : "本地"}
+            ${tool.source === "server" ? $t('modals.toolDetails.server') : $t('modals.toolDetails.local')}
           </div>
         </div>
       `;
@@ -804,64 +821,69 @@ export class APIManager {
 
     const sourceInfo =
       source === "server"
-        ? '<div class="detail-item"><strong>来源:</strong> <span style="color: #28a745;">☁️ 服务器端工具</span></div>'
-        : '<div class="detail-item"><strong>来源:</strong> <span style="color: #6c757d;">💻 本地工具</span></div>';
+        ? `<div class="detail-item"><strong data-i18n="modals.toolDetails.source">${$t('modals.toolDetails.source')}:</strong> <span style="color: #28a745;">☁️ <span data-i18n="modals.toolDetails.server">${$t('modals.toolDetails.server')}</span></span></div>`
+        : `<div class="detail-item"><strong data-i18n="modals.toolDetails.source">${$t('modals.toolDetails.source')}:</strong> <span style="color: #6c757d;">💻 <span data-i18n="modals.toolDetails.local">${$t('modals.toolDetails.local')}</span></span></div>`;
 
     // 统一的删除按钮，先删本地再删服务器
     const deleteButton = `<button class="btn btn-danger" onclick="app.apiManager.deleteToolUnified('${
       tool.name
-    }', '${tool.id || ""}', '${source}'); this.closest('.modal').remove();">
-        删除工具
+    }', '${tool.id || ""}', '${source}'); this.closest('.modal').remove();" data-i18n="modals.toolDetails.deleteTool">
+        ${$t('modals.toolDetails.deleteTool')}
       </button>`;
 
     modalContent.innerHTML = `
       <div class="modal-header">
-        <h3>工具详情</h3>
+        <h3 data-i18n="modals.toolDetails.title">${$t('modals.toolDetails.title')}</h3>
         <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
       </div>
       <div class="modal-body">
-        <div class="detail-item"><strong>名称:</strong> ${tool.name}</div>
-        <div class="detail-item"><strong>描述:</strong> ${
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.name">${$t('modals.toolDetails.name')}:</strong> ${tool.name}</div>
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.description">${$t('modals.toolDetails.description')}:</strong> ${
           tool.description
         }</div>
-        <div class="detail-item"><strong>URL:</strong> ${tool.url}</div>
-        <div class="detail-item"><strong>请求方式:</strong> ${this.getToolMethod(
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.url">${$t('modals.toolDetails.url')}:</strong> ${tool.url}</div>
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.method">${$t('modals.toolDetails.method')}:</strong> ${this.getToolMethod(
           tool
         )}</div>
-        <div class="detail-item"><strong>Content-Type:</strong> ${this.getToolContentType(
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.contentType">${$t('modals.toolDetails.contentType')}:</strong> ${this.getToolContentType(
           tool
         )}</div>
-        <div class="detail-item"><strong>参数:</strong>
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.parameters">${$t('modals.toolDetails.parameters')}:</strong>
           <div class="json-display"><pre>${this.formatToolBody(
             tool
           )}</pre></div>
         </div>
-        <div class="detail-item"><strong>创建时间:</strong> ${new Date(
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.createdAt">${$t('modals.toolDetails.createdAt')}:</strong> ${new Date(
           tool.createdAt
         ).toLocaleString()}</div>
-        <div class="detail-item"><strong>状态:</strong> ${
-          tool.isPublic ? "公开" : "私有"
+        <div class="detail-item"><strong data-i18n="modals.toolDetails.status">${$t('modals.toolDetails.status')}:</strong> ${
+          tool.isPublic ? $t('modals.toolDetails.public') : $t('modals.toolDetails.private')
         }</div>
         ${sourceInfo}
         ${
           source === "server" && tool.id
-            ? `<div class="detail-item"><strong>服务器ID:</strong> ${tool.id}</div>`
+            ? `<div class="detail-item"><strong data-i18n="modals.toolDetails.serverId">${$t('modals.toolDetails.serverId')}:</strong> ${tool.id}</div>`
             : ""
         }
       </div>
       <div class="modal-footer">
         ${deleteButton}
-        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
-          关闭
+        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();" data-i18n="modals.close">
+          ${$t('modals.close')}
         </button>
       </div>
     `;
 
     document.body.appendChild(modal);
+    
+    // 更新弹窗内的翻译文本
+    if (window.app && window.app.uiUpdater) {
+      window.app.uiUpdater.updateContainerTexts(modal);
+    }
   }
 
   async deleteTool(index) {
-    if (!confirm("确定要删除这个工具吗？")) {
+    if (!confirm($t('alerts.confirmDeleteTool'))) {
       return;
     }
 
@@ -1649,7 +1671,7 @@ export class APIManager {
   async refreshServerTools() {
     await this.loadServerTools();
     this.updateGeneratedTools();
-    this.uiManager.showNotification("服务器端工具已刷新", "success");
+    this.uiManager.showNotification($t('alerts.serverToolsRefreshed'), "success");
   }
 
   /**
@@ -1657,9 +1679,7 @@ export class APIManager {
    */
   async deleteToolUnified(toolName, serverId, source) {
     if (
-      !confirm(
-        `确定要删除工具"${toolName}"吗？\n\n将会按照以下顺序删除：\n1. 删除本地工具（如果存在）\n2. 删除服务器端工具（如果存在）`
-      )
+      !confirm($t('alerts.confirmDeleteToolUnified', { name: toolName }))
     ) {
       return;
     }
@@ -1791,7 +1811,7 @@ export class APIManager {
    * 删除服务器端工具（保留原方法作为备用）
    */
   async deleteServerTool(toolId, toolName) {
-    if (!confirm(`确定要删除服务器端工具"${toolName}"吗？`)) {
+    if (!confirm($t('alerts.confirmDeleteServerTool', { name: toolName }))) {
       return;
     }
 

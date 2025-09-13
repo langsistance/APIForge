@@ -733,6 +733,7 @@ function createWindow() {
   console.log("Window created successfully");
 }
 
+
 // 基本的IPC处理器 - 只保留网络拦截相关的
 ipcMain.handle("get-intercepted-apis", () => {
   return interceptedAPIs;
@@ -742,6 +743,7 @@ ipcMain.handle("clear-intercepted-apis", () => {
   interceptedAPIs.length = 0;
   return true;
 });
+
 
 // 按需获取API响应体
 ipcMain.handle("fetch-api-response-body", async (event, apiCall) => {
@@ -1443,6 +1445,7 @@ function generateSchema(responseBody) {
     return { type: "string", example: responseBody };
   }
 }
+
 
 // 应用启动
 app.whenReady().then(() => {

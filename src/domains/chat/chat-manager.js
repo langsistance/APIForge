@@ -47,6 +47,22 @@ export class ChatManager {
   setupEventListeners() {
     this.sendChatBtn?.addEventListener("click", () => this.sendMessage());
     this.clearChatBtn?.addEventListener("click", () => this.clearChat());
+    
+    // 监听语言变更，更新欢迎消息
+    if (window.app && window.app.i18n) {
+      window.app.i18n.addLanguageChangeListener((newLang, oldLang) => {
+        // 如果聊天历史只有一条欢迎消息，则更新它
+        if (this.chatHistory.length === 1 && 
+            this.chatHistory[0].role === 'assistant' && 
+            this.chatHistory[0].content.includes('APIForge')) {
+          this.chatHistory = []; // 清空欢迎消息
+          if (this.chatMessages) {
+            this.chatMessages.innerHTML = '';
+          }
+          this.showWelcomeMessage(); // 重新显示欢迎消息
+        }
+      });
+    }
 
     this.chatInput?.addEventListener("keypress", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -68,15 +84,15 @@ export class ChatManager {
   }
 
   showWelcomeMessage() {
-    this.addChatMessage(
-      "assistant",
-      "👋 欢迎使用 APIForge 智能助手！\n\n" +
-        "我可以帮助您：\n" +
-        "• 🔍 查询知识库中的信息\n" +
-        "• 🛠️ 调用已配置的工具获取数据\n" +
-        "• 💡 回答技术相关问题\n\n" +
-        "请输入您的问题，我会尽力帮助您！"
-    );
+    const welcomeMessage = 
+      $t('chat.welcome.greeting') + '\n\n' +
+      $t('chat.welcome.canHelp') + '\n' +
+      '• ' + $t('chat.welcome.feature1') + '\n' +
+      '• ' + $t('chat.welcome.feature2') + '\n' +
+      '• ' + $t('chat.welcome.feature3') + '\n\n' +
+      $t('chat.welcome.prompt');
+      
+    this.addChatMessage("assistant", welcomeMessage);
   }
 
   async sendMessage() {
@@ -273,7 +289,7 @@ export class ChatManager {
               : "")
         );
       } else {
-        throw new Error(finalResult.error || "查询失败");
+        throw new Error(finalResult.error || $t('chat.queryFailed'));
       }
     } catch (error) {
       if (
@@ -284,10 +300,10 @@ export class ChatManager {
         return; // 不显示错误消息，因为是用户主动取消
       }
 
-      console.error("工具查询失败:", error);
+      console.error($t('chat.toolQueryFailed'), error);
       this.addChatMessage(
         "assistant",
-        `❌ 工具查询失败：${error.message}\n\n` + "正在尝试其他方式..."
+        $t('chat.toolQueryFailed', { error: error.message })
       );
 
       // 降级到本地处理
@@ -337,7 +353,7 @@ export class ChatManager {
         return; // 不显示错误消息，因为是用户主动取消
       }
 
-      console.error("直接查询失败:", error);
+      console.error($t('chat.directQueryFailed'), error);
       this.addChatMessage(
         "assistant",
         "连接服务器失败，请检查网络连接后重试。"
@@ -403,7 +419,7 @@ export class ChatManager {
         formattedResponse
       );
 
-      this.addChatMessage("assistant", "📊 已获取工具数据，正在分析...");
+      this.addChatMessage("assistant", $t('chat.toolDataObtained'));
     } catch (error) {
       console.error("工具执行失败:", error);
 
@@ -644,7 +660,7 @@ export class ChatManager {
       const data = await response.json();
       return data;
     } catch (error) {
-      throw new Error(`本地工具执行失败: ${error.message}`);
+      throw new Error($t('chat.localToolExecutionFailed', { error: error.message }));
     }
   }
 
@@ -686,7 +702,7 @@ export class ChatManager {
         if (seconds % 5 === 0) {
           // 每5秒更新一次
           this.updateLastAssistantMessage(
-            `⏳ 正在处理中... (已用时 ${seconds} 秒)`
+            $t('chat.processingWithTime', { seconds })
           );
         }
         break;
@@ -850,7 +866,7 @@ export class ChatManager {
   }
 
   clearChat() {
-    if (confirm("确定要清空聊天记录吗？")) {
+    if (confirm($t('alerts.confirmClearChat'))) {
       this.chatHistory = [];
       if (this.chatMessages) {
         this.chatMessages.innerHTML = "";

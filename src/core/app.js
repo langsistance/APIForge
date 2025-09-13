@@ -8,13 +8,24 @@ import { KnowledgeManager } from '../domains/knowledge/knowledge-manager.js';
 import { ChatManager } from '../domains/chat/chat-manager.js';
 import { UIManager } from '../ui/ui-manager.js';
 import { StorageUtil } from '../utils/storage-util.js';
+import i18nManager from '../i18n/i18n-manager.js';
+import UIUpdater from '../utils/ui-updater.js';
 
 class APIForgeApp {
   constructor() {
     // userId统一通过authService管理，不在app层存储
     
+    // 初始化多语言和UI更新器
+    this.i18n = i18nManager;
+    this.uiUpdater = new UIUpdater(this.i18n);
+    
+    // 监听语言变更，更新工具栏显示
+    this.i18n.addLanguageChangeListener(() => {
+      this.updateLanguageDisplay();
+    });
+    
     // 初始化各个管理器
-    this.uiManager = new UIManager();
+    this.uiManager = new UIManager(this.i18n, this.uiUpdater);
     this.storageUtil = new StorageUtil();
     this.browserManager = new BrowserManager(this.uiManager);
     this.apiManager = new APIManager(this.uiManager);
@@ -24,6 +35,9 @@ class APIForgeApp {
 
   async init() {
     console.log('🚀 APIForge App 启动中...');
+    
+    // 初始化多语言系统
+    this.setupLanguageSelector();
     
     // 初始化UI
     this.uiManager.init();
@@ -38,6 +52,58 @@ class APIForgeApp {
     await this.chatManager.init();
     
     console.log('✅ APIForge App 启动完成');
+  }
+
+  /**
+   * 设置语言选择器
+   */
+  setupLanguageSelector() {
+    // 设置工具栏语言切换按钮
+    this.setupLanguageToggle();
+    
+    console.log('🌍 Language selector initialized');
+  }
+
+  /**
+   * 设置工具栏语言切换按钮
+   */
+  setupLanguageToggle() {
+    const languageToggle = document.getElementById('languageToggle');
+    
+    if (languageToggle) {
+      // 更新显示
+      this.updateLanguageDisplay();
+      
+      // 点击切换语言
+      languageToggle.addEventListener('click', () => {
+        const currentLang = this.i18n.getCurrentLanguage();
+        const newLang = currentLang === 'zh' ? 'en' : 'zh';
+        this.i18n.setLanguage(newLang);
+      });
+    }
+  }
+
+  /**
+   * 更新语言显示
+   */
+  updateLanguageDisplay() {
+    const currentLanguageIcon = document.getElementById('currentLanguageIcon');
+    const currentLanguageText = document.getElementById('currentLanguageText');
+    const toggleBtn = document.getElementById('languageToggle');
+    
+    if (currentLanguageIcon && currentLanguageText && toggleBtn) {
+      const currentLang = this.i18n.getCurrentLanguage();
+      
+      if (currentLang === 'zh') {
+        currentLanguageIcon.textContent = '🇨🇳';
+        currentLanguageText.textContent = '中文';
+        toggleBtn.title = 'Switch to English';
+      } else {
+        currentLanguageIcon.textContent = '🇺🇸';
+        currentLanguageText.textContent = 'English';
+        toggleBtn.title = '切换到中文';
+      }
+    }
   }
 
   // generateUserId方法已移除，统一使用authService

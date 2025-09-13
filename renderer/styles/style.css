@@ -12,8 +12,46 @@ body {
 
 .app-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
+}
+
+/* 顶部工具栏 */
+.top-toolbar {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  height: 50px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.app-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 主内容区域 */
+.main-content {
+  display: flex;
+  flex: 1;
   gap: 2px;
+  overflow: hidden;
 }
 
 .panel {
@@ -1590,5 +1628,69 @@ input[type="checkbox"] {
 .status-badge.pending {
   background-color: var(--warning-color);
   color: #212529;
+}
+
+/* 语言选择器（顶部工具栏） */
+.language-selector {
+  position: relative;
+}
+
+.language-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.language-toggle-btn:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.language-toggle-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.language-toggle-btn:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+}
+
+#currentLanguageIcon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+#currentLanguageText {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 知识库控件容器布局 */
+.knowledge-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 浏览器控件布局 */
+.browser-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
