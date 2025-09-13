@@ -548,4 +548,17 @@ export class KnowledgeManager {
       window.app.saveLocalData();
     }
   }
+
+  /**
+   * 加载服务器知识库（别名方法，与APIManager保持一致）
+   */
+  async loadServerKnowledge() {
+    try {
+      console.log('🔄 刷新知识库列表...');
+      await this.loadKnowledgeFromServer();
+      console.log('✅ 知识库刷新完成');
+    } catch (error) {
+      console.error('❌ 知识库刷新失败:', error);
+    }
+  }
 }

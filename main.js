@@ -18,6 +18,40 @@ function shouldInterceptRequest(details) {
   const url = details.url.toLowerCase();
   const resourceType = details.resourceType;
   
+  // 0. 排除我们自己的API请求和常见的开发/调试请求
+  const excludePatterns = [
+    '52.53.129.41:7777',
+    'localhost:',
+    '127.0.0.1:',
+    'chrome-extension://',
+    'devtools://',
+    'webpack',
+    'hot-update',
+    'sockjs-node',
+    'browsersync',
+    '__webpack',
+    'hot-reload',
+    // 常见的软件更新和分析服务
+    'electron',
+    'github.com/electron',
+    'update.electronjs.org',
+    'sentry.io',
+    'bugsnag.com',
+    'crashlytics.com',
+    // 软件内部通信
+    'file://',
+    'data:',
+    'blob:',
+    // Node.js 相关请求特征
+    'node-fetch',
+    'axios/'
+  ];
+  
+  if (excludePatterns.some(pattern => url.includes(pattern))) {
+    console.log(`🚫 Filtered excluded request: ${url.substring(0, 100)}...`);
+    return false;
+  }
+  
   // 0. 排除OPTIONS预检请求
   if (details.method === 'OPTIONS') {
     console.log(`🚫 Filtered OPTIONS request: ${url.substring(0, 100)}...`);
@@ -198,13 +232,14 @@ function shouldInterceptRequest(details) {
     return true;
   }
 
-  // 6. 拦截可能的后端数据端点
+  // 6. 拦截可能的后端数据端点 (更精确的匹配)
   if (
-    url.includes("/list") ||
-    url.includes("/get") ||
-    url.includes("/fetch") ||
-    url.includes("/query") ||
-    url.includes("/search")
+    url.includes("/api/list") ||
+    url.includes("/api/get") ||
+    url.includes("/api/fetch") ||
+    url.includes("/api/query") ||
+    url.includes("/api/search") ||
+    (resourceType === "xhr" && (url.includes("/list") || url.includes("/search")))
   ) {
     return true;
   }
@@ -898,14 +933,29 @@ function setupAPIInterception() {
   const ENABLE_MAIN_PROCESS_INTERCEPTION = true;
 
   if (ENABLE_MAIN_PROCESS_INTERCEPTION) {
-    // 为webview session设置拦截
+    // 只为webview session设置拦截 - 确保只录制浏览器内容
     const webviewSession = session.fromPartition("persist:webview");
 
     webviewSession.webRequest.onBeforeSendHeaders(
       { urls: ["*://*/*"] },
       (details, callback) => {
-        // 判断是否需要拦截此请求
-        const shouldIntercept = shouldInterceptRequest(details);
+        // 更严格的过滤：只拦截来自webview的浏览器请求
+        const isOwnAPICall = details.requestHeaders && 
+          details.requestHeaders['X-APIForge-Request'] && 
+          details.requestHeaders['X-APIForge-Request'][0] === 'true';
+        
+        // 排除我们的服务器请求
+        const isOwnServerCall = details.url.includes('52.53.129.41:7777');
+        
+        // 检查User-Agent，确保是来自浏览器环境的请求
+        const userAgent = details.requestHeaders && 
+          (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+        const isBrowserRequest = userAgent && 
+          (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+        
+        // 判断是否需要拦截此请求 - 只拦截来自webview浏览器环境的请求
+        const shouldIntercept = !isOwnAPICall && !isOwnServerCall && 
+          isBrowserRequest && shouldInterceptRequest(details);
 
         if (shouldIntercept) {
           console.log(
@@ -1002,12 +1052,21 @@ function setupAPIInterception() {
           //   });
           // }
         } else {
-          console.log(
-            "📱 Webview request:",
-            details.resourceType,
-            details.method,
-            details.url
-          );
+          // 记录被过滤的请求类型，帮助调试
+          if (!isBrowserRequest) {
+            console.log(
+              "🚫 Filtered non-browser request (missing Mozilla UA):",
+              details.method,
+              details.url.substring(0, 100) + '...'
+            );
+          } else {
+            console.log(
+              "📱 Webview request:",
+              details.resourceType,
+              details.method,
+              details.url.substring(0, 100) + '...'
+            );
+          }
 
           // 强制拦截HTML页面（排除静态资源）
           const staticFileExtensions = [
@@ -1114,7 +1173,18 @@ function setupAPIInterception() {
     webviewSession.webRequest.onHeadersReceived(
       { urls: ["*://*/*"] },
       (details, callback) => {
-        if (shouldInterceptRequest(details)) {
+        // 统一过滤逻辑：只拦截浏览器请求
+        const isOwnAPICall = details.requestHeaders && 
+          details.requestHeaders['X-APIForge-Request'] && 
+          details.requestHeaders['X-APIForge-Request'][0] === 'true';
+        const isOwnServerCall = details.url.includes('52.53.129.41:7777');
+        
+        const userAgent = details.requestHeaders && 
+          (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+        const isBrowserRequest = userAgent && 
+          (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+        
+        if (!isOwnAPICall && !isOwnServerCall && isBrowserRequest && shouldInterceptRequest(details)) {
           console.log(
             "📨 WebView response headers:",
             details.resourceType,
@@ -1151,7 +1221,18 @@ function setupAPIInterception() {
 
     // 添加WebView响应完成拦截
     webviewSession.webRequest.onCompleted({ urls: ["*://*/*"] }, (details) => {
-      if (shouldInterceptRequest(details)) {
+      // 统一过滤逻辑：只拦截浏览器请求
+      const isOwnAPICall = details.requestHeaders && 
+        details.requestHeaders['X-APIForge-Request'] && 
+        details.requestHeaders['X-APIForge-Request'][0] === 'true';
+      const isOwnServerCall = details.url.includes('52.53.129.41:7777');
+      
+      const userAgent = details.requestHeaders && 
+        (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+      const isBrowserRequest = userAgent && 
+        (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+      
+      if (!isOwnAPICall && !isOwnServerCall && isBrowserRequest && shouldInterceptRequest(details)) {
         console.log(
           "✅ WebView request completed:",
           details.resourceType,
@@ -1179,69 +1260,23 @@ function setupAPIInterception() {
       }
     });
 
-    // 同时为默认session设置拦截
-    session.defaultSession.webRequest.onBeforeSendHeaders(
-      { urls: ["*://*/*"] },
-      (details, callback) => {
-        // 排除我们自己的API请求 - 通过请求头识别
-        const isOwnAPICall = details.requestHeaders && 
-          details.requestHeaders['X-APIForge-Request'] && 
-          details.requestHeaders['X-APIForge-Request'][0] === 'true';
-        
-        if (!isOwnAPICall && shouldInterceptRequest(details)) {
-          console.log(
-            "🔍 MAIN PROCESS API request:",
-            details.resourceType,
-            details.method,
-            details.url
-          );
-
-          // 创建API调用对象
-          const apiCall = {
-            id: Date.now() + Math.random(),
-            method: details.method || "GET",
-            url: details.url,
-            requestHeaders: details.requestHeaders || {},
-            timestamp: Date.now(),
-            resourceType: details.resourceType,
-          };
-
-          // 检查是否已存在相同的API请求（避免重复）
-          const isDuplicateApi = interceptedAPIs.some(
-            (existing) =>
-              existing.url === apiCall.url &&
-              existing.method === apiCall.method &&
-              Math.abs(existing.timestamp - apiCall.timestamp) < 1000
-          );
-
-          if (!isDuplicateApi) {
-            // 添加到拦截列表
-            interceptedAPIs.push(apiCall);
-          } else {
-            console.log(
-              "🔄 Skipping duplicate API request:",
-              apiCall.method,
-              apiCall.url
-            );
-          }
-
-          // 发送到前端
-          if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send("api-intercepted", apiCall);
-          }
-
-          console.log("📤 Sent API to frontend:", apiCall.method, apiCall.url);
-        }
-        callback({});
-      }
-    );
+    // 不再拦截默认session - 避免录制软件自身的API请求
+    console.log("🔇 Skipping default session interception to avoid recording app's own requests");
 
     // 为webview session监听响应
     webviewSession.webRequest.onCompleted({ urls: ["*://*/*"] }, (details) => {
-      // 排除我们自己的API请求
-      const isOwnAPICall = details.url.includes('52.53.129.41:7777');
+      // 统一过滤逻辑：只拦截浏览器请求
+      const isOwnAPICall = details.requestHeaders && 
+        details.requestHeaders['X-APIForge-Request'] && 
+        details.requestHeaders['X-APIForge-Request'][0] === 'true';
+      const isOwnServerCall = details.url.includes('52.53.129.41:7777');
       
-      if (!isOwnAPICall && shouldInterceptRequest(details)) {
+      const userAgent = details.requestHeaders && 
+        (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+      const isBrowserRequest = userAgent && 
+        (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+      
+      if (!isOwnAPICall && !isOwnServerCall && isBrowserRequest && shouldInterceptRequest(details)) {
         console.log(
           "✅ WEBVIEW API response completed:",
           details.method,
@@ -1273,45 +1308,8 @@ function setupAPIInterception() {
       }
     });
 
-    // 监听默认session响应
-    session.defaultSession.webRequest.onCompleted(
-      { urls: ["*://*/*"] },
-      (details) => {
-        // 排除我们自己的API请求 - 通过请求头识别
-        const isOwnAPICall = details.requestHeaders && 
-          details.requestHeaders['X-APIForge-Request'] && 
-          details.requestHeaders['X-APIForge-Request'][0] === 'true';
-        
-        if (!isOwnAPICall && shouldInterceptRequest(details)) {
-          console.log(
-            "✅ API response completed:",
-            details.method,
-            details.url,
-            details.statusCode
-          );
-
-          // 找到对应的API调用
-          const apiIndex = interceptedAPIs.findIndex(
-            (api) =>
-              api.url === details.url &&
-              Math.abs(api.timestamp - Date.now()) < 30000 // 30秒内的请求
-          );
-
-          if (apiIndex !== -1) {
-            interceptedAPIs[apiIndex].responseHeaders = details.responseHeaders;
-            interceptedAPIs[apiIndex].statusCode = details.statusCode;
-            interceptedAPIs[apiIndex].completed = true;
-
-            if (mainWindow && mainWindow.webContents) {
-              mainWindow.webContents.send(
-                "api-completed",
-                interceptedAPIs[apiIndex]
-              );
-            }
-          }
-        }
-      }
-    );
+    // 不再监听默认session响应 - 已移除默认session拦截
+    console.log("🔇 No longer monitoring default session responses");
   }
 }
 
@@ -1399,6 +1397,7 @@ function extractParameters(apiCall) {
 
   if (apiCall.body) {
     try {
+      // 先尝试解析JSON格式的body
       const bodyData = JSON.parse(apiCall.body[0]);
       Object.keys(bodyData).forEach((key) => {
         params[key] = {
@@ -1407,7 +1406,30 @@ function extractParameters(apiCall) {
           value: bodyData[key],
         };
       });
-    } catch (e) {}
+    } catch (e) {
+      // 如果JSON解析失败，尝试解析表单数据
+      try {
+        const bodyString = apiCall.body[0];
+        if (typeof bodyString === 'string') {
+          // 解析 application/x-www-form-urlencoded 格式
+          const searchParams = new URLSearchParams(bodyString);
+          searchParams.forEach((value, key) => {
+            params[key] = {
+              type: "string",
+              description: `Form parameter: ${key}`,
+              value: value,
+            };
+          });
+        }
+      } catch (formError) {
+        // 如果都解析不了，将body作为原始数据显示
+        params['_rawBody'] = {
+          type: "raw",
+          description: "Raw body data",
+          value: apiCall.body[0],
+        };
+      }
+    }
   }
 
   return params;

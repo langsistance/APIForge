@@ -306,7 +306,7 @@ class WebSightAPIClient {
         tool: {
           origin_params: {
             method: "GET",
-            contentType: "application/json",
+            "Content-Type": "application/json",
           },
         },
       };
@@ -473,32 +473,173 @@ class WebSightAPIClient {
   /**
    * 执行工具调用
    */
-  async executeTool(toolData, params) {
+  async executeTool(toolData, params, apiManager = null) {
     try {
-      // 解析工具URL和参数
-      const url = new URL(toolData.url);
-
-      // 构建请求
-      const response = await fetch(toolData.url, {
-        method: "GET", // 可以根据工具配置调整
-        headers: {
-          Accept: "application/json",
-        },
-        timeout: (toolData.timeout || 30) * 1000,
+      console.log('🚀 开始执行工具:', toolData);
+      console.log('🚀 工具URL:', toolData.url);
+      console.log('🚀 工具参数字符串:', toolData.params);
+      console.log('🚀 origin_params:', toolData.origin_params);
+      
+      // 解析工具参数，获取请求方法和Content-Type
+      let method = 'GET';
+      let contentType = 'application/json';
+      let requestBody = null;
+      
+      // 从工具参数中提取请求配置
+      if (toolData.origin_params || toolData.params) {
+        const toolParams = toolData.origin_params || JSON.parse(toolData.params || '{}');
+        console.log('🔧 解析后的工具参数:', toolParams);
+        
+        method = toolParams.method || 'GET';
+        contentType = toolParams["Content-Type"] || toolParams.contentType || 'application/json';
+        
+        console.log('🔧 请求方法:', method);
+        console.log('🔧 Content-Type:', contentType);
+        
+        // 构建请求体（排除method和Content-Type）
+        const bodyParams = { ...toolParams };
+        delete bodyParams.method;
+        delete bodyParams["Content-Type"];
+        delete bodyParams.contentType; // 向后兼容，也删除旧字段名
+        
+        console.log('🔧 准备构建请求体的参数:', bodyParams);
+        
+        // 如果有实际参数，构建请求体
+        if (Object.keys(bodyParams).length > 0) {
+          if (contentType.includes('application/x-www-form-urlencoded')) {
+            // Form格式，构造键值对
+            requestBody = new URLSearchParams(bodyParams).toString();
+            console.log('🔧 构建form-urlencoded请求体:', requestBody);
+          } else if (contentType.includes('application/json')) {
+            // JSON格式
+            requestBody = JSON.stringify(bodyParams);
+            console.log('🔧 构建JSON请求体:', requestBody);
+          } else if (contentType.includes('multipart/form-data')) {
+            // multipart格式暂不处理
+            console.log('🔧 multipart/form-data暂不支持');
+          } else {
+            // 其他格式，默认使用JSON
+            requestBody = JSON.stringify(bodyParams);
+            console.log('🔧 使用默认JSON格式:', requestBody);
+          }
+        } else {
+          console.log('🔧 没有body参数需要发送');
+        }
+      }
+      
+      // 构建基础headers（不覆盖User-Agent，避免被反爬虫系统检测）
+      const headers = {
+        'Accept': 'application/json'
+      };
+      
+      // 获取存储的domain headers
+      let storedHeaders = null;
+      if (apiManager) {
+        // 首先尝试获取特定域名的headers
+        storedHeaders = apiManager.getDomainHeaders(toolData.url);
+        
+        // 如果没有特定域名的headers，获取最新的headers作为备选
+        if (!storedHeaders) {
+          storedHeaders = apiManager.getLatestHeaders();
+        }
+      }
+      
+      // 如果有存储的headers，直接使用存储的headers作为基础（保持原有的认证信息）
+      if (storedHeaders && Object.keys(storedHeaders).length > 0) {
+        console.log('📋 使用存储的headers:', storedHeaders);
+        
+        // 直接使用存储的headers，但保留Accept
+        Object.keys(storedHeaders).forEach(key => {
+          headers[key] = storedHeaders[key];
+        });
+        
+        // 如果有请求体且工具参数指定了不同的Content-Type，则覆盖
+        if (requestBody && method !== 'GET' && contentType) {
+          headers['Content-Type'] = contentType;
+        }
+      } else {
+        console.log('⚠️ 未找到存储的headers，使用默认headers');
+        
+        // 如果有请求体，设置Content-Type
+        if (requestBody && method !== 'GET') {
+          headers['Content-Type'] = contentType;
+        }
+        
+        // 如果没有headers且这是POST请求，提示用户可能需要登录
+        if (method === 'POST') {
+          console.warn('🔐 POST请求缺少认证headers，可能需要用户先登录网站');
+          
+          // 这里可以触发用户登录提示（后续实现）
+          if (apiManager && apiManager.uiManager) {
+            apiManager.uiManager.showNotification(
+              '检测到POST请求但没有认证信息，请先在浏览器中登录相关网站',
+              'warning',
+              5000
+            );
+          }
+        }
+      }
+      
+      console.log('🔧 执行工具请求:', {
+        url: toolData.url,
+        method,
+        headers,
+        body: requestBody
       });
 
-      const data = await response.json();
+      // 构建fetch选项
+      const fetchOptions = {
+        method,
+        headers,
+        timeout: (toolData.timeout || 30) * 1000,
+      };
+      
+      // 如果有请求体且不是GET请求，添加body
+      if (requestBody && method !== 'GET') {
+        fetchOptions.body = requestBody;
+        console.log('🔧 添加请求体到fetch选项:', requestBody);
+      }
+
+      // 执行请求
+      const response = await fetch(toolData.url, fetchOptions);
+      
+      console.log('📥 工具请求响应:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      // 尝试解析响应
+      let responseData;
+      const contentTypeHeader = response.headers.get('content-type');
+      
+      if (contentTypeHeader && contentTypeHeader.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
 
       return {
-        success: true,
-        data,
+        success: response.ok,
+        data: responseData,
         statusCode: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        method: method,
+        usedStoredHeaders: !!storedHeaders
       };
     } catch (error) {
       console.error("Tool execution failed:", error);
+      
+      // 如果是网络错误且是POST请求，可能是认证问题
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('🔐 工具执行失败，可能是认证问题:', error.message);
+      }
+      
       return {
         success: false,
         error: error.message,
+        method: method || 'GET'
       };
     }
   }
@@ -568,7 +709,8 @@ class WebSightAPIClient {
       // 2. 使用第一个匹配的工具
       const tool = searchResult.tools[0];
 
-      // 3. 执行工具
+      // 3. 执行工具  
+      // 注意：这里无法获取apiManager引用，考虑后续重构传参
       const executionResult = await this.executeTool(tool, params);
 
       return {

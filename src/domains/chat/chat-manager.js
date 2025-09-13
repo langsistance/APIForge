@@ -371,32 +371,30 @@ export class ChatManager {
 
       // 从 Find_knowledge_tool 返回的工具中获取 URL
       const tool = queryInfo.tools[0]; // 使用第一个工具
-      const toolUrl = tool.url;
+      
+      // 构建完整的工具数据，包含URL和参数
+      const toolData = {
+        url: tool.url,
+        params: tool.params || tool.tool_params,
+        origin_params: toolRequest.tool?.origin_params,
+        timeout: tool.timeout || 30
+      };
 
-      if (!toolUrl) {
+      if (!toolData.url) {
         throw new Error("工具URL未找到");
       }
 
-      console.log("Find_knowledge_tool 返回的工具URL:", toolUrl);
-      console.log("get_tool_request 返回的数据:", toolRequest);
+      console.log("准备执行的工具数据:", toolData);
 
-      // 根据实际返回的数据结构提取 origin_params
-      const originParams = toolRequest.tool?.origin_params || {};
-      const method = originParams.method || "GET";
-      const contentType = originParams.contentType || "application/json";
-
-      console.log("提取的 origin_params:", originParams);
-      console.log("合并后的请求参数:", { url: toolUrl, method, contentType });
-
-      // 执行合并后的API调用
-      const toolResponse = await this.executeCombinedAPICall(
-        toolUrl,
-        method,
-        contentType
+      // 使用apiClient的executeTool方法，它会正确处理form-urlencoded请求体
+      const toolResponse = await this.apiClient.executeTool(
+        toolData,
+        {},  // 额外参数
+        this.apiManager  // 传递apiManager以获取存储的headers
       );
 
       // 确保工具响应是对象格式
-      const formattedResponse = this.formatToolResponse(toolResponse);
+      const formattedResponse = this.formatToolResponse(toolResponse.data || toolResponse);
 
       // 保存工具响应
       await this.apiClient.saveToolResponse(
@@ -424,18 +422,75 @@ export class ChatManager {
     }
   }
 
+  // 根据URL查找原始拦截的API数据
+  findOriginalAPIByUrl(url) {
+    try {
+      const interceptedAPIs = this.apiManager.getAPIs();
+      // 查找完全匹配的URL
+      const exactMatch = interceptedAPIs.find(api => api.url === url);
+      if (exactMatch) {
+        return exactMatch;
+      }
+      
+      // 如果没有完全匹配，尝试基于路径匹配（去掉查询参数）
+      try {
+        const targetUrl = new URL(url);
+        const targetPath = targetUrl.origin + targetUrl.pathname;
+        
+        const pathMatch = interceptedAPIs.find(api => {
+          try {
+            const apiUrl = new URL(api.url);
+            const apiPath = apiUrl.origin + apiUrl.pathname;
+            return apiPath === targetPath;
+          } catch (e) {
+            return false;
+          }
+        });
+        
+        if (pathMatch) {
+          console.log("通过路径匹配找到原始API:", pathMatch.url);
+          return pathMatch;
+        }
+      } catch (e) {
+        console.log("URL解析失败，尝试其他匹配方式");
+      }
+      
+      console.log("未找到匹配的原始API数据，将使用默认headers");
+      return null;
+    } catch (error) {
+      console.error("查找原始API失败:", error);
+      return null;
+    }
+  }
+
   async executeCombinedAPICall(url, method, contentType) {
     try {
       console.log("执行合并的API调用:", { url, method, contentType });
 
+      // 尝试从已拦截的API中找到匹配的原始headers
+      const originalAPI = this.findOriginalAPIByUrl(url);
+      let headers = {
+        "Content-Type": contentType, // 使用工具参数中的contentType覆盖
+      };
+      
+      // 如果找到原始API数据，直接使用原始headers（保持认证信息）
+      if (originalAPI && originalAPI.headers) {
+        console.log("找到原始API headers:", originalAPI.headers);
+        // 直接使用原始headers，但覆盖Content-Type
+        headers = {
+          ...originalAPI.headers,
+          "Content-Type": contentType, // 确保使用工具参数的contentType覆盖
+        };
+        console.log("合并后的headers:", headers);
+      }
+
       // 构建请求配置
       const fetchOptions = {
         method: method,
-        headers: {
-          "Content-Type": contentType,
-          "X-APIForge-Request": "true", // 标识我们自己的请求
-        },
+        headers: headers,
       };
+      
+      console.log("最终请求配置:", fetchOptions);
 
       // 发起请求
       const response = await fetch(url, fetchOptions);
@@ -501,7 +556,8 @@ export class ChatManager {
         // 外部API调用
         return await this.apiClient.executeTool(
           toolRequest,
-          toolRequest.tool_params
+          toolRequest.tool_params,
+          this.apiManager
         );
       } else {
         // 本地工具调用
@@ -534,23 +590,39 @@ export class ChatManager {
           const params = JSON.parse(tool.params);
           method = params.method || tool.method || "GET";
           contentType =
-            params.contentType || tool.contentType || "application/json";
+            params["Content-Type"] || params.contentType || tool.contentType || "application/json";
 
-          // 提取除了method和contentType外的所有参数作为body
+          // 提取除了method和Content-Type外的所有参数作为body
           bodyData = { ...params };
           delete bodyData.method;
-          delete bodyData.contentType;
+          delete bodyData["Content-Type"];
+          delete bodyData.contentType; // 向后兼容，也删除旧字段名
         } catch (e) {
           console.error("解析工具参数失败:", e);
         }
       }
 
+      // 尝试从已拦截的API中找到匹配的原始headers
+      const originalAPI = this.findOriginalAPIByUrl(tool.url);
+      let headers = {
+        "Content-Type": contentType, // 使用工具参数中的contentType覆盖
+      };
+      
+      // 如果找到原始API数据，直接使用原始headers（保持认证信息）
+      if (originalAPI && originalAPI.headers) {
+        console.log("本地工具找到原始API headers:", originalAPI.headers);
+        // 直接使用原始headers，但覆盖Content-Type
+        headers = {
+          ...originalAPI.headers,
+          "Content-Type": contentType, // 确保使用工具参数的contentType覆盖
+        };
+        console.log("本地工具合并后的headers:", headers);
+      }
+
       // 构建请求配置
       const fetchOptions = {
         method: method,
-        headers: {
-          "Content-Type": contentType,
-        },
+        headers: headers,
       };
 
       // 根据请求方式和内容类型设置请求体
@@ -562,8 +634,8 @@ export class ChatManager {
           // Form格式
           fetchOptions.body = new URLSearchParams(bodyData).toString();
         } else {
-          // 其他格式，如果有rawBody字段，使用它
-          fetchOptions.body = bodyData.rawBody || JSON.stringify(bodyData);
+          // 其他格式，使用JSON格式
+          fetchOptions.body = JSON.stringify(bodyData);
         }
       }
 
@@ -582,7 +654,7 @@ export class ChatManager {
       const tool = tools[0];
 
       try {
-        const result = await this.apiClient.executeTool(tool, {});
+        const result = await this.apiClient.executeTool(tool, {}, this.apiManager);
 
         if (result.success) {
           this.addChatMessage(

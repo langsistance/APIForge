@@ -5,19 +5,28 @@
 export class BrowserManager {
   constructor(uiManager) {
     this.uiManager = uiManager;
-    this.isIntercepting = false;
+    this.isIntercepting = true; // 默认开启拦截
     
     // UI元素
     this.webview = null;
     this.urlInput = null;
     this.loadBtn = null;
     this.startInterceptBtn = null;
-    this.stopInterceptBtn = null;
   }
 
   async init() {
     this.initializeElements();
     this.setupEventListeners();
+    
+    // 立即设置拦截（因为拦截始终开启）
+    if (this.webview) {
+      // 给webview一点时间完成初始化
+      setTimeout(() => {
+        this.setupInterception();
+        console.log('🚀 拦截已自动启用');
+      }, 100);
+    }
+    
     console.log('✅ BrowserManager 初始化完成');
   }
 
@@ -26,7 +35,6 @@ export class BrowserManager {
     this.urlInput = document.getElementById('urlInput');
     this.loadBtn = document.getElementById('loadBtn');
     this.startInterceptBtn = document.getElementById('startInterceptBtn');
-    this.stopInterceptBtn = document.getElementById('stopInterceptBtn');
   }
 
   setupEventListeners() {
@@ -37,8 +45,10 @@ export class BrowserManager {
     });
     
     // 拦截控制
-    this.startInterceptBtn.addEventListener('click', () => this.startIntercepting());
-    this.stopInterceptBtn.addEventListener('click', () => this.stopIntercepting());
+    this.startInterceptBtn.addEventListener('click', () => this.toggleInterception());
+    
+    // 初始化按钮状态
+    this.updateButtonState();
     
     // Webview事件
     if (this.webview) {
@@ -48,10 +58,8 @@ export class BrowserManager {
       
       this.webview.addEventListener('did-finish-load', () => {
         console.log('页面加载完成');
-        // 页面加载完成后也重新设置拦截
-        if (this.isIntercepting) {
-          this.setupInterception();
-        }
+        // 页面加载完成后自动设置拦截（始终开启）
+        this.setupInterception();
       });
 
       // 监听来自webview的消息
@@ -75,29 +83,38 @@ export class BrowserManager {
     
     console.log('加载网页:', formattedUrl);
     this.webview.src = formattedUrl;
+    
+    // 确保在新页面加载后重新设置拦截
+    console.log('🚀 页面加载中，拦截将自动启用');
   }
 
-  startIntercepting() {
-    this.isIntercepting = true;
-    this.startInterceptBtn.disabled = true;
-    this.stopInterceptBtn.disabled = false;
+  toggleInterception() {
+    this.isIntercepting = !this.isIntercepting;
+    this.updateButtonState();
     
-    console.log('开始拦截API请求');
-    this.uiManager.showNotification('API拦截已开启', 'success');
-    
-    // 如果webview已加载，立即设置拦截
-    if (this.webview && this.webview.src !== 'about:blank') {
-      this.setupInterception();
+    if (this.isIntercepting) {
+      console.log('开始拦截API请求');
+      this.uiManager.showNotification('API拦截已开启', 'success');
+      // 如果webview已加载，立即设置拦截
+      if (this.webview && this.webview.src !== 'about:blank') {
+        this.setupInterception();
+      }
+    } else {
+      console.log('停止拦截API请求');
+      this.uiManager.showNotification('API拦截已关闭', 'info');
     }
   }
 
-  stopIntercepting() {
-    this.isIntercepting = false;
-    this.startInterceptBtn.disabled = false;
-    this.stopInterceptBtn.disabled = true;
-    
-    console.log('停止拦截API请求');
-    this.uiManager.showNotification('API拦截已关闭', 'info');
+  updateButtonState() {
+    if (this.startInterceptBtn) {
+      if (this.isIntercepting) {
+        this.startInterceptBtn.textContent = '停止拦截';
+        this.startInterceptBtn.className = 'intercept-active';
+      } else {
+        this.startInterceptBtn.textContent = '开始拦截';
+        this.startInterceptBtn.className = '';
+      }
+    }
   }
 
   setupInterception() {

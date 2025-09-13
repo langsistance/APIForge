@@ -97,6 +97,7 @@ class APIService {
     // 从请求体提取参数
     if (apiData.body) {
       try {
+        // 先尝试解析JSON格式的body
         const bodyData = JSON.parse(apiData.body);
         Object.entries(bodyData).forEach(([key, value]) => {
           params.push({
@@ -107,7 +108,33 @@ class APIService {
             example: value
           });
         });
-      } catch (e) {}
+      } catch (e) {
+        // 如果JSON解析失败，尝试解析表单数据
+        try {
+          if (typeof apiData.body === 'string') {
+            // 解析 application/x-www-form-urlencoded 格式
+            const searchParams = new URLSearchParams(apiData.body);
+            searchParams.forEach((value, key) => {
+              params.push({
+                name: key,
+                type: 'string',
+                location: 'form',
+                required: true,
+                example: value
+              });
+            });
+          }
+        } catch (formError) {
+          // 如果都解析不了，添加原始body参数
+          params.push({
+            name: '_rawBody',
+            type: 'raw',
+            location: 'body',
+            required: true,
+            example: apiData.body
+          });
+        }
+      }
     }
 
     return params;

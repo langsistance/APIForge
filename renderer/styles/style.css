@@ -126,18 +126,22 @@ body {
 }
 
 #startInterceptBtn {
-  background-color: #ffc107;
-  color: #212529;
+  background-color: #28a745;
+  color: white;
+  font-size: 12px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
-#stopInterceptBtn {
+#startInterceptBtn.intercept-active {
   background-color: #dc3545;
   color: white;
 }
 
-#stopInterceptBtn:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
+#startInterceptBtn:hover {
+  opacity: 0.8;
 }
 
 /* 工具栏样式 */

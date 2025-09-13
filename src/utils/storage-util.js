@@ -225,6 +225,7 @@ export class StorageUtil {
       knowledgeItems: [],
       chatHistory: [],
       userId: null,
+      domainHeaders: {}, // 按域名存储header的对象，格式：{ "example.com": { headers: {...}, timestamp: "..." } }
       settings: {
         theme: 'light',
         autoSave: true,

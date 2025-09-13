@@ -34,9 +34,14 @@ console.log('🚀 Webview preload script loaded');
             id: requestId,
             url: url,
             method: options.method || 'GET',
+            // 捕获请求headers (从options中)
+            requestHeaders: options.headers || {},
+            // 捕获请求body (从options中)
+            requestBody: options.body || null,
             status: response.status,
             statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
+            responseHeaders: Object.fromEntries(response.headers.entries()),
+            headers: options.headers || {}, // 保持向后兼容
             data: responseData,
             responseBody: responseData,
             timestamp: Date.now()
@@ -61,8 +66,19 @@ console.log('🚀 Webview preload script loaded');
     this._method = method;
     this._url = url;
     this._requestId = 'xhr_' + Date.now() + '_' + Math.random();
+    this._requestHeaders = {}; // 存储请求headers
     console.log('🔍 XHR open intercepted:', method, url);
     return originalXHROpen.apply(this, arguments);
+  };
+
+  // 拦截setRequestHeader来捕获headers
+  const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+    if (!this._requestHeaders) {
+      this._requestHeaders = {};
+    }
+    this._requestHeaders[name] = value;
+    return originalSetRequestHeader.apply(this, arguments);
   };
   
   XMLHttpRequest.prototype.send = function(body) {
@@ -86,9 +102,14 @@ console.log('🚀 Webview preload script loaded');
             id: self._requestId,
             url: self._url,
             method: self._method,
+            // 捕获请求headers
+            requestHeaders: self._requestHeaders || {},
+            // 捕获请求body
+            requestBody: body || null,
             status: this.status,
             statusText: this.statusText,
-            headers: this.getAllResponseHeaders(),
+            responseHeaders: this.getAllResponseHeaders(),
+            headers: self._requestHeaders || {}, // 保持向后兼容
             data: responseData,
             responseBody: responseData,
             timestamp: Date.now()

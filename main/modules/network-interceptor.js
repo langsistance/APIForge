@@ -14,6 +14,40 @@ class NetworkInterceptor {
     const url = details.url.toLowerCase();
     const resourceType = details.resourceType;
     
+    // 排除软件自身的API请求和常见的开发/调试请求
+    const excludePatterns = [
+      '52.53.129.41:7777',
+      'localhost:',
+      '127.0.0.1:',
+      'chrome-extension://',
+      'devtools://',
+      'webpack',
+      'hot-update',
+      'sockjs-node',
+      'browsersync',
+      '__webpack',
+      'hot-reload',
+      // 常见的软件更新和分析服务
+      'electron',
+      'github.com/electron',
+      'update.electronjs.org',
+      'sentry.io',
+      'bugsnag.com',
+      'crashlytics.com',
+      // 软件内部通信
+      'file://',
+      'data:',
+      'blob:',
+      // Node.js 相关请求特征
+      'node-fetch',
+      'axios/'
+    ];
+    
+    if (excludePatterns.some(pattern => url.includes(pattern))) {
+      console.log(`🚫 Filtered excluded request: ${url.substring(0, 100)}...`);
+      return false;
+    }
+    
     // 排除OPTIONS预检请求
     if (details.method === 'OPTIONS') {
       console.log(`🚫 Filtered OPTIONS request: ${url.substring(0, 100)}...`);
@@ -104,11 +138,23 @@ class NetworkInterceptor {
   }
 
   setupSessionInterception(targetSession, sessionType) {
+    // 只拦截webview session，避免录制软件自身请求
+    if (sessionType === 'default') {
+      console.log(`🔇 Skipping ${sessionType} session interception to avoid recording app's own requests`);
+      return;
+    }
+
     // 请求发送前拦截
     targetSession.webRequest.onBeforeSendHeaders(
       { urls: ['*://*/*'] },
       (details, callback) => {
-        if (this.shouldInterceptRequest(details)) {
+        // 检查User-Agent，确保是来自浏览器环境的请求
+        const userAgent = details.requestHeaders && 
+          (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+        const isBrowserRequest = userAgent && 
+          (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+        
+        if (isBrowserRequest && this.shouldInterceptRequest(details)) {
           console.log(`🎯 [${sessionType}] INTERCEPTING:`, details.resourceType, details.method, details.url);
 
           // 转换headers格式
@@ -168,7 +214,13 @@ class NetworkInterceptor {
     targetSession.webRequest.onHeadersReceived(
       { urls: ['*://*/*'] },
       (details, callback) => {
-        if (this.shouldInterceptRequest(details)) {
+        // 统一的浏览器请求检查
+        const userAgent = details.requestHeaders && 
+          (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+        const isBrowserRequest = userAgent && 
+          (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+          
+        if (isBrowserRequest && this.shouldInterceptRequest(details)) {
           console.log(`📨 [${sessionType}] Response headers:`, details.resourceType, details.statusCode, details.url);
 
           const apiIndex = this.interceptedAPIs.findIndex(
@@ -193,7 +245,13 @@ class NetworkInterceptor {
     targetSession.webRequest.onCompleted(
       { urls: ['*://*/*'] },
       (details) => {
-        if (this.shouldInterceptRequest(details)) {
+        // 统一的浏览器请求检查
+        const userAgent = details.requestHeaders && 
+          (details.requestHeaders['User-Agent'] || details.requestHeaders['user-agent']);
+        const isBrowserRequest = userAgent && 
+          (Array.isArray(userAgent) ? userAgent[0] : userAgent).includes('Mozilla');
+          
+        if (isBrowserRequest && this.shouldInterceptRequest(details)) {
           console.log(`✅ [${sessionType}] Request completed:`, details.resourceType, details.statusCode, details.url);
 
           const apiIndex = this.interceptedAPIs.findIndex(
