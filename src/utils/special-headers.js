@@ -1,21 +1,33 @@
 /**
  * 特殊请求头配置
- * 这些header会被打平保存到服务器的工具参数中
- * 并在本地回放时用于覆盖录制的header
+ * 只保存真正特殊的、不会在同域请求中自动携带的headers
+ * 浏览器自动生成的headers（Referer、Sec-Fetch-*等）不需要保存
  */
 
 export const SPECIAL_HEADERS = [
+  // 只保存内容类型，这个可能影响请求格式
   "Content-Type",
   "content-type",
-  "Referer",
-  "referer",
+  // CSRF/XSRF tokens - 这些是应用特定的，需要保存
   "X-CSRF-Token",
-  "x-csrf-token",
+  "x-csrf-token", 
   "X-XSRF-Token",
   "x-xsrf-token",
-  "Sec-Fetch-Site",
-  "sec-fetch-site",
-  // Cookie不保存，它是会话敏感信息，应该从本地实时获取
+  // 自定义认证headers
+  "X-API-Key",
+  "x-api-key",
+  "X-Auth-Token",
+  "x-auth-token",
+  // 其他应用特定的headers
+  "X-Requested-With",
+  "x-requested-with",
+  
+  // 以下headers不保存，因为它们会自动生成或从同域请求中获取：
+  // - Cookie: 会话敏感，从浏览器自动获取
+  // - Referer: 浏览器自动生成
+  // - Sec-Fetch-*: 浏览器自动生成
+  // - User-Agent: 浏览器自动生成
+  // - Accept-*: 浏览器自动生成
 ];
 
 /**
@@ -26,11 +38,11 @@ export function standardizeHeaderName(header) {
 
   const mapping = {
     "content-type": "Content-Type",
-    referer: "Referer",
-    authorization: "Authorization",
     "x-csrf-token": "X-CSRF-Token",
     "x-xsrf-token": "X-XSRF-Token",
-    "sec-fetch-site": "Sec-Fetch-Site",
+    "x-api-key": "X-API-Key",
+    "x-auth-token": "X-Auth-Token",
+    "x-requested-with": "X-Requested-With",
   };
 
   return mapping[lower] || header;

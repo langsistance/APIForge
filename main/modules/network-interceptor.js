@@ -16,25 +16,34 @@ class NetworkInterceptor {
    * 通用请求头修复，自动检测和修正可能导致请求失败的头部
    */
   enhanceRequestHeaders(url, originalHeaders) {
+    console.log('🌟 ============ Network Interceptor Headers增强 ============');
+    console.log('🌟 URL:', url);
+    console.log('🌟 原始Headers:', Object.keys(originalHeaders));
+    
     const headers = { ...originalHeaders };
     const urlObj = new URL(url);
     const origin = urlObj.origin;
     
     // 规则1: 总是设置sec-fetch-site为same-origin
     // 很多网站（如weibo）会检查这个头部，cross-site会导致403
+    const originalSecFetchSite = headers['Sec-Fetch-Site'] || headers['sec-fetch-site'];
     headers['Sec-Fetch-Site'] = 'same-origin';
     delete headers['sec-fetch-site'];
-    console.log(`🔧 Set Sec-Fetch-Site to same-origin for ${urlObj.hostname}`);
+    console.log(`🌟 修改 Sec-Fetch-Site: ${originalSecFetchSite} -> same-origin`);
     
     // 规则2: 确保有Referer（如果没有，自动生成）
-    if (!headers['Referer'] && !headers['referer']) {
+    const originalReferer = headers['Referer'] || headers['referer'];
+    if (!originalReferer) {
       // 自动生成referer
       headers['Referer'] = origin + '/';
-      console.log(`🔧 Auto-generated Referer: ${headers['Referer']}`);
+      console.log(`🌟 生成 Referer: null -> ${headers['Referer']}`);
     } else if (headers['referer'] && !headers['Referer']) {
       // 标准化referer格式
       headers['Referer'] = headers['referer'];
       delete headers['referer'];
+      console.log(`🌟 标准化 Referer: referer -> Referer`);
+    } else {
+      console.log(`🌟 保留 Referer: ${originalReferer}`);
     }
     
     // 规则3: 保持头部一致性
@@ -53,6 +62,17 @@ class NetworkInterceptor {
         delete headers[lower];
       }
     }
+    
+    // 检查Cookie
+    if (headers['Cookie']) {
+      const cookies = headers['Cookie'].split(';');
+      console.log(`🌟 Cookie: [来自Electron Session持久化存储, ${cookies.length} cookies]`);
+    } else {
+      console.log('🌟 Cookie: 无');
+    }
+    
+    console.log('🌟 增强后的Headers字段:', Object.keys(headers));
+    console.log('🌟 =========================================');
     
     // 应用用户自定义的配置规则
     return this.headersConfig.applyRules(url, headers);

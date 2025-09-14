@@ -131,12 +131,17 @@ class APIForgeApp {
   }
 
   saveLocalData() {
+    // 先获取当前存储的数据，保留domainHeaders
+    const currentData = this.storageUtil.loadAll() || {};
+    
     const data = {
       interceptedAPIs: this.apiManager.getAPIs(),
       generatedTools: this.apiManager.getTools(),
       // 知识库不再本地存储
       // knowledgeItems: this.knowledgeManager.getKnowledge(),
       chatHistory: this.chatManager.getHistory(),
+      // 保留已存储的domainHeaders
+      domainHeaders: currentData.domainHeaders || {},
       // userId由各管理器自行通过authService获取
       lastSaved: new Date().toISOString()
     };

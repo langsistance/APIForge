@@ -5,7 +5,6 @@
 import authService from "../../services/auth-service.js";
 import { CONFIG } from "../../utils/config.js";
 import apiClient from "../../services/websight-api-client.js";
-import { extractSpecialHeaders } from "../../utils/special-headers.js";
 
 export class APIManager {
   constructor(uiManager) {
@@ -96,12 +95,12 @@ export class APIManager {
     const processedAPI = this.processAPIData(apiData);
     this.interceptedAPIs.push(processedAPI);
 
-    // 如果是POST请求且有headers，存储到域名headers中
+    // 存储所有请求的headers到域名headers中（不仅仅是POST）
     if (
-      processedAPI.method === "POST" &&
       processedAPI.headers &&
       Object.keys(processedAPI.headers).length > 0
     ) {
+      console.log(`📝 存储 ${processedAPI.method} 请求的headers:`, processedAPI.url);
       this.storeDomainHeaders(processedAPI.url, processedAPI.headers);
     }
 
@@ -623,40 +622,11 @@ export class APIManager {
       let remoteKnowledgeId = null;
       let toolParamsForAPI = null; // 在外部定义变量
 
-      // 获取当前选中的API，以提取特殊headers
-      let specialHeaders = {};
-      
-      // 检查是否有apiSelect元素（用于从下拉列表选择API的情况）
-      const apiSelect = document.getElementById("apiSelect");
-      if (apiSelect && apiSelect.value !== "none") {
-        const selectedAPI = this.interceptedAPIs[parseInt(apiSelect.value)];
-        if (selectedAPI && selectedAPI.headers) {
-          // 使用统一的特殊header提取函数
-          specialHeaders = extractSpecialHeaders(selectedAPI.headers);
-          console.log('📋 从下拉列表提取的特殊headers:', specialHeaders);
-        }
-      } else {
-        // 如果没有apiSelect，尝试通过URL匹配找到对应的API
-        const toolURL = document.getElementById("toolURL").value.trim();
-        if (toolURL) {
-          const matchedAPI = this.interceptedAPIs.find(api => api.url === toolURL);
-          if (matchedAPI && matchedAPI.headers) {
-            specialHeaders = extractSpecialHeaders(matchedAPI.headers);
-            console.log('📋 通过URL匹配提取的特殊headers:', specialHeaders);
-          }
-        }
-      }
-
-      // 构建工具参数：包含method和所有特殊headers（打平保存）
+      // 构建工具参数：只包含method和Content-Type
       let toolParamsObj = {
         method: method,
-        ...specialHeaders, // 将所有特殊headers打平保存
+        'Content-Type': contentType,
       };
-      
-      // 如果界面上设置了Content-Type但API中没有，使用界面的值
-      if (!specialHeaders['Content-Type'] && contentType) {
-        toolParamsObj['Content-Type'] = contentType;
-      }
 
       // 如果有body内容，将其平铺到params中
       // parsedBody 现在应该是一个对象（从 generateToolParamsBodyOnly 返回的JSON解析而来）
@@ -1444,6 +1414,9 @@ export class APIManager {
       console.error("无法从URL提取域名:", url);
       return;
     }
+    
+    console.log(`💾 准备存储域名 ${domain} 的headers`);
+    console.log(`💾 storageUtil存在：`, !!window.app?.storageUtil);
 
     try {
       // 过滤掉一些不需要存储的headers
@@ -1482,6 +1455,13 @@ export class APIManager {
       if (window.app?.storageUtil) {
         window.app.storageUtil.saveAll(storedData);
         console.log(`✅ 已存储域名 ${domain} 的headers:`, filteredHeaders);
+        
+        // 验证存储
+        const verifyData = window.app.storageUtil.loadAll();
+        console.log(`🔍 验证存储 - domainHeaders存在:`, !!verifyData.domainHeaders);
+        console.log(`🔍 验证存储 - ${domain}存在:`, !!verifyData.domainHeaders?.[domain]);
+      } else {
+        console.error(`❌ window.app.storageUtil 不存在，无法保存headers`);
       }
     } catch (error) {
       console.error("存储域名headers失败:", error);
@@ -1496,11 +1476,19 @@ export class APIManager {
   getDomainHeaders(url) {
     const domain = this.extractDomain(url);
     if (!domain) {
+      console.log(`🔍 getDomainHeaders: 无法提取域名 from ${url}`);
       return null;
     }
+    
+    console.log(`🔍 查找域名 ${domain} 的headers`);
+    console.log(`🔍 storageUtil存在：`, !!window.app?.storageUtil);
 
     try {
       const storedData = window.app?.storageUtil?.loadAll() || {};
+      console.log(`🔍 localStorage数据存在:`, !!storedData);
+      console.log(`🔍 domainHeaders字段存在:`, !!storedData.domainHeaders);
+      console.log(`🔍 存储的所有域名:`, Object.keys(storedData.domainHeaders || {}));
+      
       const domainHeaders = storedData.domainHeaders || {};
 
       if (domainHeaders[domain]) {

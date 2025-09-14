@@ -5,7 +5,6 @@
 
 import authService from "./auth-service.js";
 import { CONFIG } from "../utils/config.js";
-import { isSpecialHeader } from "../utils/special-headers.js";
 
 class WebSightAPIClient {
   constructor() {
@@ -481,45 +480,32 @@ class WebSightAPIClient {
       console.log('🚀 工具参数字符串:', toolData.params);
       console.log('🚀 origin_params:', toolData.origin_params);
       
-      // 解析工具参数，获取请求方法和特殊headers
+      // 解析工具参数，获取请求方法
       let method = 'GET';
       let requestBody = null;
-      let specialHeaders = {};
+      let contentType = 'application/json';
       
       // 从工具参数中提取请求配置
       if (toolData.origin_params || toolData.params) {
         const toolParams = toolData.origin_params || JSON.parse(toolData.params || '{}');
         console.log('🔧 解析后的工具参数:', toolParams);
+        console.log('🔧 工具参数包含的字段:', Object.keys(toolParams));
         
         method = toolParams.method || 'GET';
-        
-        // 提取所有特殊headers（这些是从服务器保存的，需要覆盖本地的）
-        Object.keys(toolParams).forEach(key => {
-          if (isSpecialHeader(key)) {
-            specialHeaders[key] = toolParams[key];
-            console.log(`🔧 使用保存的特殊header ${key}:`, toolParams[key]);
-          }
-        });
+        contentType = toolParams['Content-Type'] || 'application/json';
         
         console.log('🔧 请求方法:', method);
-        console.log('🔧 特殊headers:', specialHeaders);
+        console.log('🔧 Content-Type:', contentType);
         
-        // 构建请求体（排除method和所有特殊headers）
+        // 构建请求体（排除method和Content-Type）
         const bodyParams = { ...toolParams };
         delete bodyParams.method;
-        
-        // 删除所有特殊headers，它们不应该出现在body中
-        Object.keys(bodyParams).forEach(key => {
-          if (isSpecialHeader(key)) {
-            delete bodyParams[key];
-          }
-        });
+        delete bodyParams['Content-Type'];
         
         console.log('🔧 准备构建请求体的参数:', bodyParams);
         
         // 如果有实际参数，构建请求体
         if (Object.keys(bodyParams).length > 0) {
-          const contentType = specialHeaders['Content-Type'] || 'application/json';
           
           if (contentType.includes('application/x-www-form-urlencoded')) {
             // Form格式，构造键值对
@@ -542,40 +528,55 @@ class WebSightAPIClient {
         }
       }
       
-      // 构建基础headers
+      console.log('🎯 ============ Headers 来源追踪 ============');
+      
+      // 1. 基础headers（工具默认）
       const headers = {
         'Accept': 'application/json',
+        'Content-Type': contentType,
       };
+      console.log('📦 [1] 基础Headers（工具默认）:');
+      console.log('    Accept:', headers.Accept);
+      console.log('    Content-Type:', headers['Content-Type']);
       
-      // 获取本地存储的domain headers（这些是本地录制的）
+      // 2. 获取本地存储的domain headers（localStorage中录制的）
       let storedHeaders = null;
       if (apiManager) {
         // 首先尝试获取特定域名的headers
         storedHeaders = apiManager.getDomainHeaders(toolData.url);
         
-        // 如果没有特定域名的headers，获取最新的headers作为备选
-        if (!storedHeaders) {
+        if (storedHeaders) {
+          console.log('💾 [2] localStorage录制的Headers（找到域名匹配）:');
+        } else {
+          // 如果没有特定域名的headers，获取最新的headers作为备选
           storedHeaders = apiManager.getLatestHeaders();
+          if (storedHeaders) {
+            console.log('💾 [2] localStorage录制的Headers（使用最新录制）:');
+          }
         }
       }
       
-      // 先添加本地存储的headers（作为基础）
+      // 添加本地存储的headers
       if (storedHeaders && Object.keys(storedHeaders).length > 0) {
-        console.log('📋 本地存储的headers:', storedHeaders);
-        
         Object.keys(storedHeaders).forEach(key => {
-          // 先添加所有本地headers
-          headers[key] = storedHeaders[key];
+          console.log(`    ${key}: ${storedHeaders[key].substring(0, 50)}${storedHeaders[key].length > 50 ? '...' : ''}`);
+          // 添加本地headers（但不覆盖已有的Accept和Content-Type）
+          if (key !== 'Accept' && key !== 'Content-Type') {
+            headers[key] = storedHeaders[key];
+          }
         });
+      } else {
+        console.log('⚠️ [2] localStorage中没有录制的headers');
       }
       
-      // 然后用服务器保存的特殊headers覆盖本地的（关键步骤！）
-      Object.keys(specialHeaders).forEach(key => {
-        headers[key] = specialHeaders[key];
-        console.log(`✅ 覆盖header ${key}:`, specialHeaders[key]);
+      // 3. 显示合并后的headers
+      console.log('🔄 [3] 合并后的Headers（准备发送）:');
+      Object.keys(headers).forEach(key => {
+        const value = headers[key];
+        const displayValue = value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : '';
+        console.log(`    ${key}: ${displayValue}`);
       });
-      
-      console.log('🔧 最终合并的headers:', headers);
+      console.log('🎯 ======================================');
         
       // Cookie应该从本地headers获取，不从服务器保存的特殊headers中获取
       // 因为Cookie是会话敏感信息，每次请求都应该使用最新的本地Cookie
@@ -601,13 +602,6 @@ class WebSightAPIClient {
         }
       }
       
-      console.log('🔧 执行工具请求:', {
-        url: toolData.url,
-        method,
-        headers,
-        body: requestBody
-      });
-
       // 构建fetch选项
       const fetchOptions = {
         method,
@@ -618,8 +612,25 @@ class WebSightAPIClient {
       // 如果有请求体且不是GET请求，添加body
       if (requestBody && method !== 'GET') {
         fetchOptions.body = requestBody;
-        console.log('🔧 添加请求体到fetch选项:', requestBody);
       }
+
+      console.log('🚀 ============ 发送请求 ============');
+      console.log('🌐 URL:', toolData.url);
+      console.log('📤 Method:', method);
+      console.log('📝 Headers实际发送:');
+      Object.keys(headers).forEach(key => {
+        const value = headers[key];
+        if (key.toLowerCase() === 'cookie') {
+          // Cookie可能很长，只显示部分
+          console.log(`    ${key}: [${value ? value.split(';').length : 0} cookies]`);
+        } else {
+          console.log(`    ${key}: ${value}`);
+        }
+      });
+      if (requestBody) {
+        console.log('📦 Body:', requestBody.substring(0, 200) + (requestBody.length > 200 ? '...' : ''));
+      }
+      console.log('🚀 ======================================');
 
       // 执行请求
       const response = await fetch(toolData.url, fetchOptions);
