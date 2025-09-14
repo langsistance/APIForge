@@ -5,6 +5,7 @@
 import authService from "../../services/auth-service.js";
 import { CONFIG } from "../../utils/config.js";
 import apiClient from "../../services/websight-api-client.js";
+import { extractSpecialHeaders } from "../../utils/special-headers.js";
 
 export class APIManager {
   constructor(uiManager) {
@@ -622,11 +623,40 @@ export class APIManager {
       let remoteKnowledgeId = null;
       let toolParamsForAPI = null; // 在外部定义变量
 
-      // 构建工具参数：包含method、Content-Type，并将body内容平铺
+      // 获取当前选中的API，以提取特殊headers
+      let specialHeaders = {};
+      
+      // 检查是否有apiSelect元素（用于从下拉列表选择API的情况）
+      const apiSelect = document.getElementById("apiSelect");
+      if (apiSelect && apiSelect.value !== "none") {
+        const selectedAPI = this.interceptedAPIs[parseInt(apiSelect.value)];
+        if (selectedAPI && selectedAPI.headers) {
+          // 使用统一的特殊header提取函数
+          specialHeaders = extractSpecialHeaders(selectedAPI.headers);
+          console.log('📋 从下拉列表提取的特殊headers:', specialHeaders);
+        }
+      } else {
+        // 如果没有apiSelect，尝试通过URL匹配找到对应的API
+        const toolURL = document.getElementById("toolURL").value.trim();
+        if (toolURL) {
+          const matchedAPI = this.interceptedAPIs.find(api => api.url === toolURL);
+          if (matchedAPI && matchedAPI.headers) {
+            specialHeaders = extractSpecialHeaders(matchedAPI.headers);
+            console.log('📋 通过URL匹配提取的特殊headers:', specialHeaders);
+          }
+        }
+      }
+
+      // 构建工具参数：包含method和所有特殊headers（打平保存）
       let toolParamsObj = {
         method: method,
-        "Content-Type": contentType,
+        ...specialHeaders, // 将所有特殊headers打平保存
       };
+      
+      // 如果界面上设置了Content-Type但API中没有，使用界面的值
+      if (!specialHeaders['Content-Type'] && contentType) {
+        toolParamsObj['Content-Type'] = contentType;
+      }
 
       // 如果有body内容，将其平铺到params中
       // parsedBody 现在应该是一个对象（从 generateToolParamsBodyOnly 返回的JSON解析而来）
@@ -639,6 +669,7 @@ export class APIManager {
       }
 
       toolParamsForAPI = JSON.stringify(toolParamsObj);
+      console.log('工具参数（包含headers）:', toolParamsForAPI);
 
       if (createKnowledge) {
         // 调用create_tool_and_knowledge API

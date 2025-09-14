@@ -1,13 +1,61 @@
 const { session } = require('electron');
+const HeadersConfigManager = require('./headers-config');
 
 class NetworkInterceptor {
   constructor() {
     this.interceptedAPIs = [];
     this.mainWindow = null;
+    this.headersConfig = new HeadersConfigManager();
   }
 
   setMainWindow(window) {
     this.mainWindow = window;
+  }
+
+  /**
+   * 通用请求头修复，自动检测和修正可能导致请求失败的头部
+   */
+  enhanceRequestHeaders(url, originalHeaders) {
+    const headers = { ...originalHeaders };
+    const urlObj = new URL(url);
+    const origin = urlObj.origin;
+    
+    // 规则1: 总是设置sec-fetch-site为same-origin
+    // 很多网站（如weibo）会检查这个头部，cross-site会导致403
+    headers['Sec-Fetch-Site'] = 'same-origin';
+    delete headers['sec-fetch-site'];
+    console.log(`🔧 Set Sec-Fetch-Site to same-origin for ${urlObj.hostname}`);
+    
+    // 规则2: 确保有Referer（如果没有，自动生成）
+    if (!headers['Referer'] && !headers['referer']) {
+      // 自动生成referer
+      headers['Referer'] = origin + '/';
+      console.log(`🔧 Auto-generated Referer: ${headers['Referer']}`);
+    } else if (headers['referer'] && !headers['Referer']) {
+      // 标准化referer格式
+      headers['Referer'] = headers['referer'];
+      delete headers['referer'];
+    }
+    
+    // 规则3: 保持头部一致性
+    // 统一为标准格式
+    const standardHeaders = {
+      'user-agent': 'User-Agent',
+      'content-type': 'Content-Type',
+      'sec-fetch-mode': 'Sec-Fetch-Mode',
+      'sec-fetch-dest': 'Sec-Fetch-Dest',
+      'x-requested-with': 'X-Requested-With'
+    };
+    
+    for (const [lower, standard] of Object.entries(standardHeaders)) {
+      if (headers[lower] && !headers[standard]) {
+        headers[standard] = headers[lower];
+        delete headers[lower];
+      }
+    }
+    
+    // 应用用户自定义的配置规则
+    return this.headersConfig.applyRules(url, headers);
   }
 
   shouldInterceptRequest(details) {
@@ -157,11 +205,14 @@ class NetworkInterceptor {
         if (isBrowserRequest && this.shouldInterceptRequest(details)) {
           console.log(`🎯 [${sessionType}] INTERCEPTING:`, details.resourceType, details.method, details.url);
 
+          // 智能处理请求头
+          const modifiedHeaders = this.enhanceRequestHeaders(details.url, details.requestHeaders);
+
           // 转换headers格式
           const formattedHeaders = {};
-          if (details.requestHeaders) {
-            Object.keys(details.requestHeaders).forEach(key => {
-              const values = details.requestHeaders[key];
+          if (modifiedHeaders) {
+            Object.keys(modifiedHeaders).forEach(key => {
+              const values = modifiedHeaders[key];
               formattedHeaders[key] = Array.isArray(values) ? values.join(', ') : values;
             });
           }
@@ -206,7 +257,14 @@ class NetworkInterceptor {
             console.log('🔄 Skipping duplicate request:', apiCall.method, apiCall.url);
           }
         }
-        callback({});
+        
+        // 返回修改后的headers给实际的请求
+        if (isBrowserRequest) {
+          const modifiedHeaders = this.enhanceRequestHeaders(details.url, details.requestHeaders);
+          callback({ requestHeaders: modifiedHeaders });
+        } else {
+          callback({});
+        }
       }
     );
 

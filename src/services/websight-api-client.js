@@ -5,6 +5,7 @@
 
 import authService from "./auth-service.js";
 import { CONFIG } from "../utils/config.js";
+import { isSpecialHeader } from "../utils/special-headers.js";
 
 class WebSightAPIClient {
   constructor() {
@@ -480,10 +481,10 @@ class WebSightAPIClient {
       console.log('🚀 工具参数字符串:', toolData.params);
       console.log('🚀 origin_params:', toolData.origin_params);
       
-      // 解析工具参数，获取请求方法和Content-Type
+      // 解析工具参数，获取请求方法和特殊headers
       let method = 'GET';
-      let contentType = 'application/json';
       let requestBody = null;
+      let specialHeaders = {};
       
       // 从工具参数中提取请求配置
       if (toolData.origin_params || toolData.params) {
@@ -491,21 +492,35 @@ class WebSightAPIClient {
         console.log('🔧 解析后的工具参数:', toolParams);
         
         method = toolParams.method || 'GET';
-        contentType = toolParams["Content-Type"] || toolParams.contentType || 'application/json';
+        
+        // 提取所有特殊headers（这些是从服务器保存的，需要覆盖本地的）
+        Object.keys(toolParams).forEach(key => {
+          if (isSpecialHeader(key)) {
+            specialHeaders[key] = toolParams[key];
+            console.log(`🔧 使用保存的特殊header ${key}:`, toolParams[key]);
+          }
+        });
         
         console.log('🔧 请求方法:', method);
-        console.log('🔧 Content-Type:', contentType);
+        console.log('🔧 特殊headers:', specialHeaders);
         
-        // 构建请求体（排除method和Content-Type）
+        // 构建请求体（排除method和所有特殊headers）
         const bodyParams = { ...toolParams };
         delete bodyParams.method;
-        delete bodyParams["Content-Type"];
-        delete bodyParams.contentType; // 向后兼容，也删除旧字段名
+        
+        // 删除所有特殊headers，它们不应该出现在body中
+        Object.keys(bodyParams).forEach(key => {
+          if (isSpecialHeader(key)) {
+            delete bodyParams[key];
+          }
+        });
         
         console.log('🔧 准备构建请求体的参数:', bodyParams);
         
         // 如果有实际参数，构建请求体
         if (Object.keys(bodyParams).length > 0) {
+          const contentType = specialHeaders['Content-Type'] || 'application/json';
+          
           if (contentType.includes('application/x-www-form-urlencoded')) {
             // Form格式，构造键值对
             requestBody = new URLSearchParams(bodyParams).toString();
@@ -527,12 +542,12 @@ class WebSightAPIClient {
         }
       }
       
-      // 构建基础headers（不覆盖User-Agent，避免被反爬虫系统检测）
+      // 构建基础headers
       const headers = {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
       };
       
-      // 获取存储的domain headers
+      // 获取本地存储的domain headers（这些是本地录制的）
       let storedHeaders = null;
       if (apiManager) {
         // 首先尝试获取特定域名的headers
@@ -544,35 +559,41 @@ class WebSightAPIClient {
         }
       }
       
-      // 如果有存储的headers，直接使用存储的headers作为基础（保持原有的认证信息）
+      // 先添加本地存储的headers（作为基础）
       if (storedHeaders && Object.keys(storedHeaders).length > 0) {
-        console.log('📋 使用存储的headers:', storedHeaders);
+        console.log('📋 本地存储的headers:', storedHeaders);
         
-        // 直接使用存储的headers，但保留Accept
         Object.keys(storedHeaders).forEach(key => {
+          // 先添加所有本地headers
           headers[key] = storedHeaders[key];
         });
+      }
+      
+      // 然后用服务器保存的特殊headers覆盖本地的（关键步骤！）
+      Object.keys(specialHeaders).forEach(key => {
+        headers[key] = specialHeaders[key];
+        console.log(`✅ 覆盖header ${key}:`, specialHeaders[key]);
+      });
+      
+      console.log('🔧 最终合并的headers:', headers);
         
-        // 如果有请求体且工具参数指定了不同的Content-Type，则覆盖
-        if (requestBody && method !== 'GET' && contentType) {
-          headers['Content-Type'] = contentType;
-        }
-      } else {
-        console.log('⚠️ 未找到存储的headers，使用默认headers');
+      // Cookie应该从本地headers获取，不从服务器保存的特殊headers中获取
+      // 因为Cookie是会话敏感信息，每次请求都应该使用最新的本地Cookie
+      
+      // 如果是需要认证的请求但没有Cookie，提示用户
+      if (!headers['Cookie'] && !headers['Authorization']) {
+        // 检查是否是可能需要认证的请求
+        const needsAuth = method !== 'GET' || 
+                         toolData.url.includes('/user') || 
+                         toolData.url.includes('/profile') ||
+                         toolData.url.includes('/private');
         
-        // 如果有请求体，设置Content-Type
-        if (requestBody && method !== 'GET') {
-          headers['Content-Type'] = contentType;
-        }
-        
-        // 如果没有headers且这是POST请求，提示用户可能需要登录
-        if (method === 'POST') {
-          console.warn('🔐 POST请求缺少认证headers，可能需要用户先登录网站');
+        if (needsAuth) {
+          console.warn('🔐 请求可能缺少认证信息（Cookie）');
           
-          // 这里可以触发用户登录提示（后续实现）
           if (apiManager && apiManager.uiManager) {
             apiManager.uiManager.showNotification(
-              '检测到POST请求但没有认证信息，请先在浏览器中登录相关网站',
+              '检测到请求可能需要认证信息，请确保已在浏览器中登录',
               'warning',
               5000
             );
